@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GymBuddy v0.1.0</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        }
+        
+        /* Custom slider styling */
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        
+        .slider::-webkit-slider-track {
+            background: #d1d5db;
+            height: 8px;
+            border-radius: 4px;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            border: 2px solid white;
+        }
+        
+        .slider::-moz-range-track {
+            background: #d1d5db;
+            height: 8px;
+            border-radius: 4px;
+            border: none;
+        }
+        
+        .slider::-moz-range-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            border: 2px solid white;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- React and ReactDOM from unpkg -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState } = React;
+        // Inline SVG icons as React components
+        const DumbbellIcon = ({ className }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14.4 14.4 9.6 9.6" />
+                <path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.767a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.829 2.828z" />
+                <path d="m21.5 21.5-1.4-1.4" />
+                <path d="M3.9 3.9 2.5 2.5" />
+                <path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.829-2.829l2.829-2.828a2 2 0 1 1 2.828 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z" />
+            </svg>
+        );
+
+        const RepeatIcon = ({ className }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="m21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M3 21v-5h5" />
+            </svg>
+        );
+
+        const CheckIcon = ({ className }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <polyline points="20,6 9,17 4,12" />
+            </svg>
+        );
+
+        const GymBuddy = () => {
+            const exercises = [
+                { name: 'Leg Extension', weight: 50, reps: 12 },
+                { name: 'Leg Curl', weight: 37.5, reps: 15 },
+                { name: 'Chest Press', weight: 35, reps: 12 },
+                { name: 'Pulldown', weight: 47, reps: 10 },
+                { name: 'Leg Press', weight: 40, reps: 14 },
+                { name: 'Shoulder Press', weight: 22.5, reps: 12 },
+                { name: 'Chest Pull', weight: 40, reps: 14 },
+                { name: 'Hip Thrust', weight: 25, reps: 15 },
+                { name: 'Pull Over', weight: 22.5, reps: 10 },
+                { name: 'Rear Delt', weight: 18, reps: 9 },
+                { name: 'Pec Fly', weight: 25, reps: 13 }
+            ];
+
+            const [completedExercises, setCompletedExercises] = useState(new Set());
+            const [isDarkMode, setIsDarkMode] = useState(false);
+            const [editingExercise, setEditingExercise] = useState(null); // { index, type: 'weight'|'reps', value }
+            const [exerciseValues, setExerciseValues] = useState(() => {
+                // Initialize with original values
+                return exercises.reduce((acc, exercise, index) => {
+                    acc[index] = {
+                        weight: exercise.weight,
+                        reps: exercise.reps
+                    };
+                    return acc;
+                }, {});
+            });
+            // TODO: When storage is added, remember dark mode preference
+
+            const toggleExercise = (index) => {
+                const newCompleted = new Set(completedExercises);
+                if (newCompleted.has(index)) {
+                    newCompleted.delete(index);
+                } else {
+                    newCompleted.add(index);
+                }
+                setCompletedExercises(newCompleted);
+            };
+
+            const toggleDarkMode = () => {
+                setIsDarkMode(!isDarkMode);
+            };
+
+            const startEditing = (index, type) => {
+                const originalValue = exercises[index][type];
+                setEditingExercise({
+                    index,
+                    type,
+                    value: exerciseValues[index][type],
+                    original: originalValue
+                });
+            };
+
+            const updateEditValue = (newValue) => {
+                setEditingExercise(prev => ({
+                    ...prev,
+                    value: newValue
+                }));
+            };
+
+            const finishEditing = () => {
+                if (editingExercise) {
+                    setExerciseValues(prev => ({
+                        ...prev,
+                        [editingExercise.index]: {
+                            ...prev[editingExercise.index],
+                            [editingExercise.type]: editingExercise.value
+                        }
+                    }));
+                }
+                setEditingExercise(null);
+            };
+
+            const getValueRange = (originalValue, isWeight = false) => {
+                const range = Math.round(originalValue * 0.5);
+                const min = Math.max(0, originalValue - range);
+                const max = originalValue + range;
+                const step = isWeight ? 0.5 : 1;
+                return { min, max, step };
+            };
+
+            const completedCount = completedExercises.size;
+
+            return (
+                <div className={`min-h-screen p-3 transition-all duration-500 ${
+                    isDarkMode 
+                        ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
+                        : 'bg-gradient-to-br from-indigo-50 via-white to-pink-50'
+                }`}>
+                    {/* Dark overlay when editing */}
+                    {editingExercise && (
+                        <div 
+                            className="fixed inset-0 bg-black/50 z-10 transition-opacity duration-300"
+                            onClick={finishEditing}
+                        />
+                    )}
+
+                    {/* Header */}
+                    <div className="text-center mb-6 relative z-20">
+                        <h1 className={`text-4xl font-bold bg-gradient-to-r bg-clip-text text-transparent transition-all duration-500 ${
+                            isDarkMode 
+                                ? 'from-blue-400 to-purple-400' 
+                                : 'from-indigo-600 to-pink-600'
+                        }`}>
+                            GymBuddy
+                        </h1>
+                    </div>
+
+                    {/* Exercise Grid */}
+                    <div className="max-w-lg mx-auto grid grid-cols-1 gap-3 relative z-20">
+                        {exercises.map((exercise, index) => {
+                            const isCompleted = completedExercises.has(index);
+                            const isBeingEdited = editingExercise?.index === index;
+                            const shouldDarken = editingExercise && !isBeingEdited;
+                            const currentValues = exerciseValues[index];
+
+                            // If this card is being edited, show slider interface
+                            if (isBeingEdited) {
+                                const isEditingWeight = editingExercise.type === 'weight';
+                                const range = getValueRange(editingExercise.original, isEditingWeight);
+                                
+                                return (
+                                    <div 
+                                        key={index}
+                                        className={`rounded-2xl p-6 shadow-lg border-2 transition-all duration-300 relative z-30 ${
+                                            isDarkMode
+                                                ? 'bg-slate-800 border-blue-500'
+                                                : 'bg-white border-indigo-300'
+                                        }`}
+                                    >
+                                        <div className="text-center space-y-6">
+                                            <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
+                                                {exercise.name}
+                                            </h3>
+                                            
+                                            <div className="space-y-4">
+                                                {/* Slider */}
+                                                <div className="relative px-4">
+                                                    <input
+                                                        type="range"
+                                                        min={range.min}
+                                                        max={range.max}
+                                                        step={range.step}
+                                                        value={editingExercise.value}
+                                                        onChange={(e) => updateEditValue(parseFloat(e.target.value))}
+                                                        className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                                                    />
+                                                </div>
+                                                
+                                                {/* Value bubble - below slider */}
+                                                <div className="flex justify-center">
+                                                    <div className={`px-3 py-1 rounded-lg text-sm font-bold ${
+                                                        isEditingWeight 
+                                                            ? isDarkMode ? 'bg-orange-700 text-orange-100' : 'bg-orange-500 text-white'
+                                                            : isDarkMode ? 'bg-blue-700 text-blue-100' : 'bg-blue-500 text-white'
+                                                    }`}>
+                                                        {editingExercise.value}{isEditingWeight ? 'kg' : 'x'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            // Regular exercise card
+                            return (
+                                <div 
+                                    key={index}
+                                    className={`rounded-2xl p-5 shadow-lg border-2 transition-all duration-300 hover:scale-[1.02] ${
+                                        shouldDarken ? 'opacity-30' : ''
+                                    } ${
+                                        isCompleted 
+                                            ? isDarkMode
+                                                ? 'bg-gradient-to-r from-green-900/50 to-green-800/50 border-green-600 opacity-75'
+                                                : 'bg-gradient-to-r from-green-50 to-green-100/50 border-green-200 opacity-75'
+                                            : isDarkMode
+                                                ? 'bg-slate-800/80 hover:border-slate-600 hover:shadow-xl border-slate-700 hover:bg-slate-800/90'
+                                                : 'bg-white hover:border-indigo-200 hover:shadow-xl border-indigo-100 bg-gradient-to-r from-white to-indigo-50/30'
+                                    }`}
+                                >
+                                    <div className="flex items-center space-x-4">
+                                        {/* Completion Circle - Left Side */}
+                                        <div 
+                                            onClick={() => toggleExercise(index)}
+                                            className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-md cursor-pointer hover:scale-110 transition-transform duration-200"
+                                        >
+                                            {isCompleted ? (
+                                                <CheckIcon className="w-5 h-5 text-white" />
+                                            ) : (
+                                                <div className="w-3 h-3 bg-white rounded-full"></div>
+                                            )}
+                                        </div>
+
+                                        {/* Exercise Content */}
+                                        <div className="flex items-center justify-between flex-1">
+                                            <h3 className={`text-lg font-bold flex-1 min-w-0 transition-colors duration-300 ${
+                                                isCompleted 
+                                                    ? isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                                                    : isDarkMode ? 'text-white' : 'text-slate-800'
+                                            }`}>
+                                                {exercise.name}
+                                            </h3>
+                                            
+                                            <div className="flex items-center space-x-6 ml-4">
+                                                {/* Weight Badge */}
+                                                <div 
+                                                    className={`flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm transition-colors duration-300 cursor-pointer hover:scale-105 ${
+                                                        isDarkMode ? 'bg-orange-900/50 hover:bg-orange-800/60' : 'bg-orange-100 hover:bg-orange-200'
+                                                    }`}
+                                                    onTouchStart={(e) => {
+                                                        const timer = setTimeout(() => startEditing(index, 'weight'), 500);
+                                                        e.target._longPressTimer = timer;
+                                                    }}
+                                                    onTouchEnd={(e) => {
+                                                        if (e.target._longPressTimer) {
+                                                            clearTimeout(e.target._longPressTimer);
+                                                        }
+                                                    }}
+                                                    onMouseDown={(e) => {
+                                                        const timer = setTimeout(() => startEditing(index, 'weight'), 500);
+                                                        e.target._longPressTimer = timer;
+                                                    }}
+                                                    onMouseUp={(e) => {
+                                                        if (e.target._longPressTimer) {
+                                                            clearTimeout(e.target._longPressTimer);
+                                                        }
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (e.target._longPressTimer) {
+                                                            clearTimeout(e.target._longPressTimer);
+                                                        }
+                                                    }}
+                                                >
+                                                    <DumbbellIcon className={`w-4 h-4 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`} />
+                                                    <span className={`font-bold text-base transition-colors duration-300 ${
+                                                        isDarkMode ? 'text-orange-300' : 'text-orange-800'
+                                                    }`}>
+                                                        {currentValues.weight !== exercise.weight 
+                                                            ? `${currentValues.weight}/${exercise.weight}kg`
+                                                            : `${currentValues.weight}kg`
+                                                        }
+                                                    </span>
+                                                </div>
+                                                
+                                                {/* Reps Badge */}
+                                                <div 
+                                                    className={`flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm transition-colors duration-300 cursor-pointer hover:scale-105 ${
+                                                        isDarkMode ? 'bg-blue-900/50 hover:bg-blue-800/60' : 'bg-blue-100 hover:bg-blue-200'
+                                                    }`}
+                                                    onTouchStart={(e) => {
+                                                        const timer = setTimeout(() => startEditing(index, 'reps'), 500);
+                                                        e.target._longPressTimer = timer;
+                                                    }}
+                                                    onTouchEnd={(e) => {
+                                                        if (e.target._longPressTimer) {
+                                                            clearTimeout(e.target._longPressTimer);
+                                                        }
+                                                    }}
+                                                    onMouseDown={(e) => {
+                                                        const timer = setTimeout(() => startEditing(index, 'reps'), 500);
+                                                        e.target._longPressTimer = timer;
+                                                    }}
+                                                    onMouseUp={(e) => {
+                                                        if (e.target._longPressTimer) {
+                                                            clearTimeout(e.target._longPressTimer);
+                                                        }
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (e.target._longPressTimer) {
+                                                            clearTimeout(e.target._longPressTimer);
+                                                        }
+                                                    }}
+                                                >
+                                                    <RepeatIcon className={`w-4 h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                                                    <span className={`font-bold text-base transition-colors duration-300 ${
+                                                        isDarkMode ? 'text-blue-300' : 'text-blue-800'
+                                                    }`}>
+                                                        {currentValues.reps !== exercise.reps 
+                                                            ? `${currentValues.reps}/${exercise.reps}x`
+                                                            : `${currentValues.reps}x`
+                                                        }
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Progress Indicator */}
+                    <div className={`max-w-lg mx-auto mt-6 rounded-xl p-4 border transition-all duration-300 ${
+                        isDarkMode 
+                            ? 'bg-slate-800/60 backdrop-blur-sm border-slate-600/50' 
+                            : 'bg-white/60 backdrop-blur-sm border-white/50'
+                    }`}>
+                        <div className="text-center">
+                            <div className={`font-bold text-lg transition-colors duration-300 ${
+                                isDarkMode ? 'text-slate-200' : 'text-slate-700'
+                            }`}>
+                                {completedCount} of {exercises.length} exercises completed
+                            </div>
+                            <div className={`w-full rounded-full h-2 mt-2 transition-colors duration-300 ${
+                                isDarkMode ? 'bg-slate-700' : 'bg-gray-200'
+                            }`}>
+                                <div 
+                                    className="bg-gradient-to-r from-green-400 to-emerald-500 h-2 rounded-full transition-all duration-500"
+                                    style={{ width: `${(completedCount / exercises.length) * 100}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Dark Mode Toggle */}
+                    <div className="max-w-lg mx-auto mt-4 flex justify-center">
+                        <div className={`flex items-center space-x-3 px-4 py-2 rounded-full transition-all duration-300 ${
+                            isDarkMode 
+                                ? 'bg-slate-800/60 backdrop-blur-sm border border-slate-600/50' 
+                                : 'bg-white/60 backdrop-blur-sm border border-white/50'
+                        }`}>
+                            <span className={`text-sm transition-colors duration-300 ${
+                                isDarkMode ? 'text-slate-300' : 'text-slate-600'
+                            }`}>
+                                ☀️
+                            </span>
+                            <button
+                                onClick={toggleDarkMode}
+                                className={`relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none ${
+                                    isDarkMode ? 'bg-blue-600' : 'bg-gray-300'
+                                }`}
+                            >
+                                <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-md transition-transform duration-300 ${
+                                    isDarkMode ? 'transform translate-x-6' : ''
+                                }`}></div>
+                            </button>
+                            <span className={`text-sm transition-colors duration-300 ${
+                                isDarkMode ? 'text-slate-300' : 'text-slate-600'
+                            }`}>
+                                🌙
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="text-center mt-4 space-y-2">
+                        <div className={`text-sm transition-colors duration-300 ${
+                            isDarkMode ? 'text-slate-400' : 'text-slate-400'
+                        }`}>
+                            Your workout companion
+                        </div>
+                        <span className={`inline-block text-xs px-3 py-1 rounded-full shadow-sm backdrop-blur-sm transition-all duration-300 ${
+                            isDarkMode 
+                                ? 'text-slate-400 bg-slate-800/70' 
+                                : 'text-slate-400 bg-white/70'
+                        }`}>
+                            v0.4.0
+                        </span>
+                    </div>
+                </div>
+            );
+        };
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<GymBuddy />);
+    </script>
+</body>
+</html>
