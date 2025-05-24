@@ -15,6 +15,16 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         }
         
+        /* Disable text selection globally */
+        * {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
         /* Custom slider styling */
         .slider {
             -webkit-appearance: none;
@@ -179,6 +189,10 @@
                 return { min, max, step };
             };
 
+            const formatWeight = (weight) => {
+                return weight.toFixed(1);
+            };
+
             const completedCount = completedExercises.size;
 
             return (
@@ -192,6 +206,7 @@
                         <div 
                             className="fixed inset-0 bg-black/50 z-10 transition-opacity duration-300"
                             onClick={finishEditing}
+                            onTouchStart={finishEditing}
                         />
                     )}
 
@@ -234,6 +249,17 @@
                                             </h3>
                                             
                                             <div className="space-y-4">
+                                                {/* Reserved space for bubble */}
+                                                <div className="h-8 flex justify-center items-end">
+                                                    <div className={`px-3 py-1 rounded-lg text-sm font-bold ${
+                                                        isEditingWeight 
+                                                            ? isDarkMode ? 'bg-orange-700 text-orange-100' : 'bg-orange-500 text-white'
+                                                            : isDarkMode ? 'bg-blue-700 text-blue-100' : 'bg-blue-500 text-white'
+                                                    }`}>
+                                                        {isEditingWeight ? formatWeight(editingExercise.value) : editingExercise.value}{isEditingWeight ? 'kg' : 'x'}
+                                                    </div>
+                                                </div>
+                                                
                                                 {/* Slider */}
                                                 <div className="relative px-4">
                                                     <input
@@ -246,17 +272,6 @@
                                                         className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                                                     />
                                                 </div>
-                                                
-                                                {/* Value bubble - below slider */}
-                                                <div className="flex justify-center">
-                                                    <div className={`px-3 py-1 rounded-lg text-sm font-bold ${
-                                                        isEditingWeight 
-                                                            ? isDarkMode ? 'bg-orange-700 text-orange-100' : 'bg-orange-500 text-white'
-                                                            : isDarkMode ? 'bg-blue-700 text-blue-100' : 'bg-blue-500 text-white'
-                                                    }`}>
-                                                        {editingExercise.value}{isEditingWeight ? 'kg' : 'x'}
-                                                    </div>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -267,7 +282,7 @@
                             return (
                                 <div 
                                     key={index}
-                                    className={`rounded-2xl p-5 shadow-lg border-2 transition-all duration-300 hover:scale-[1.02] ${
+                                    className={`rounded-2xl p-4 shadow-lg border-2 transition-all duration-300 hover:scale-[1.02] ${
                                         shouldDarken ? 'opacity-30' : ''
                                     } ${
                                         isCompleted 
@@ -279,8 +294,20 @@
                                                 : 'bg-white hover:border-indigo-200 hover:shadow-xl border-indigo-100 bg-gradient-to-r from-white to-indigo-50/30'
                                     }`}
                                 >
-                                    <div className="flex items-center space-x-4">
-                                        {/* Completion Circle - Left Side */}
+                                    {/* Exercise Name - Top Row */}
+                                    <div className="mb-3">
+                                        <h3 className={`text-lg font-bold transition-colors duration-300 ${
+                                            isCompleted 
+                                                ? isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                                                : isDarkMode ? 'text-white' : 'text-slate-800'
+                                        }`}>
+                                            {exercise.name}
+                                        </h3>
+                                    </div>
+
+                                    {/* Controls Row */}
+                                    <div className="flex items-center space-x-3">
+                                        {/* Completion Circle */}
                                         <div 
                                             onClick={() => toggleExercise(index)}
                                             className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-md cursor-pointer hover:scale-110 transition-transform duration-200"
@@ -292,96 +319,90 @@
                                             )}
                                         </div>
 
-                                        {/* Exercise Content */}
-                                        <div className="flex items-center justify-between flex-1">
-                                            <h3 className={`text-lg font-bold flex-1 min-w-0 transition-colors duration-300 ${
-                                                isCompleted 
-                                                    ? isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                                                    : isDarkMode ? 'text-white' : 'text-slate-800'
-                                            }`}>
-                                                {exercise.name}
-                                            </h3>
+                                        {/* Badges Container */}
+                                        <div className="flex items-center space-x-3 flex-1">
+                                            {/* Weight Badge */}
+                                            <div 
+                                                className={`flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm transition-colors duration-300 cursor-pointer hover:scale-105 flex-1 justify-center ${
+                                                    isDarkMode ? 'bg-orange-900/50 hover:bg-orange-800/60' : 'bg-orange-100 hover:bg-orange-200'
+                                                }`}
+                                                onTouchStart={(e) => {
+                                                    e.preventDefault();
+                                                    const timer = setTimeout(() => startEditing(index, 'weight'), 500);
+                                                    e.target._longPressTimer = timer;
+                                                }}
+                                                onTouchEnd={(e) => {
+                                                    e.preventDefault();
+                                                    if (e.target._longPressTimer) {
+                                                        clearTimeout(e.target._longPressTimer);
+                                                    }
+                                                }}
+                                                onMouseDown={(e) => {
+                                                    const timer = setTimeout(() => startEditing(index, 'weight'), 500);
+                                                    e.target._longPressTimer = timer;
+                                                }}
+                                                onMouseUp={(e) => {
+                                                    if (e.target._longPressTimer) {
+                                                        clearTimeout(e.target._longPressTimer);
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (e.target._longPressTimer) {
+                                                        clearTimeout(e.target._longPressTimer);
+                                                    }
+                                                }}
+                                            >
+                                                <DumbbellIcon className={`w-4 h-4 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`} />
+                                                <span className={`font-bold text-sm transition-colors duration-300 ${
+                                                    isDarkMode ? 'text-orange-300' : 'text-orange-800'
+                                                }`}>
+                                                    {currentValues.weight !== exercise.weight 
+                                                        ? `${formatWeight(currentValues.weight)}/${formatWeight(exercise.weight)}kg`
+                                                        : `${formatWeight(currentValues.weight)}kg`
+                                                    }
+                                                </span>
+                                            </div>
                                             
-                                            <div className="flex items-center space-x-6 ml-4">
-                                                {/* Weight Badge */}
-                                                <div 
-                                                    className={`flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm transition-colors duration-300 cursor-pointer hover:scale-105 ${
-                                                        isDarkMode ? 'bg-orange-900/50 hover:bg-orange-800/60' : 'bg-orange-100 hover:bg-orange-200'
-                                                    }`}
-                                                    onTouchStart={(e) => {
-                                                        const timer = setTimeout(() => startEditing(index, 'weight'), 500);
-                                                        e.target._longPressTimer = timer;
-                                                    }}
-                                                    onTouchEnd={(e) => {
-                                                        if (e.target._longPressTimer) {
-                                                            clearTimeout(e.target._longPressTimer);
-                                                        }
-                                                    }}
-                                                    onMouseDown={(e) => {
-                                                        const timer = setTimeout(() => startEditing(index, 'weight'), 500);
-                                                        e.target._longPressTimer = timer;
-                                                    }}
-                                                    onMouseUp={(e) => {
-                                                        if (e.target._longPressTimer) {
-                                                            clearTimeout(e.target._longPressTimer);
-                                                        }
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        if (e.target._longPressTimer) {
-                                                            clearTimeout(e.target._longPressTimer);
-                                                        }
-                                                    }}
-                                                >
-                                                    <DumbbellIcon className={`w-4 h-4 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`} />
-                                                    <span className={`font-bold text-base transition-colors duration-300 ${
-                                                        isDarkMode ? 'text-orange-300' : 'text-orange-800'
-                                                    }`}>
-                                                        {currentValues.weight !== exercise.weight 
-                                                            ? `${currentValues.weight}/${exercise.weight}kg`
-                                                            : `${currentValues.weight}kg`
-                                                        }
-                                                    </span>
-                                                </div>
-                                                
-                                                {/* Reps Badge */}
-                                                <div 
-                                                    className={`flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm transition-colors duration-300 cursor-pointer hover:scale-105 ${
-                                                        isDarkMode ? 'bg-blue-900/50 hover:bg-blue-800/60' : 'bg-blue-100 hover:bg-blue-200'
-                                                    }`}
-                                                    onTouchStart={(e) => {
-                                                        const timer = setTimeout(() => startEditing(index, 'reps'), 500);
-                                                        e.target._longPressTimer = timer;
-                                                    }}
-                                                    onTouchEnd={(e) => {
-                                                        if (e.target._longPressTimer) {
-                                                            clearTimeout(e.target._longPressTimer);
-                                                        }
-                                                    }}
-                                                    onMouseDown={(e) => {
-                                                        const timer = setTimeout(() => startEditing(index, 'reps'), 500);
-                                                        e.target._longPressTimer = timer;
-                                                    }}
-                                                    onMouseUp={(e) => {
-                                                        if (e.target._longPressTimer) {
-                                                            clearTimeout(e.target._longPressTimer);
-                                                        }
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        if (e.target._longPressTimer) {
-                                                            clearTimeout(e.target._longPressTimer);
-                                                        }
-                                                    }}
-                                                >
-                                                    <RepeatIcon className={`w-4 h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-                                                    <span className={`font-bold text-base transition-colors duration-300 ${
-                                                        isDarkMode ? 'text-blue-300' : 'text-blue-800'
-                                                    }`}>
-                                                        {currentValues.reps !== exercise.reps 
-                                                            ? `${currentValues.reps}/${exercise.reps}x`
-                                                            : `${currentValues.reps}x`
-                                                        }
-                                                    </span>
-                                                </div>
+                                            {/* Reps Badge */}
+                                            <div 
+                                                className={`flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm transition-colors duration-300 cursor-pointer hover:scale-105 flex-1 justify-center ${
+                                                    isDarkMode ? 'bg-blue-900/50 hover:bg-blue-800/60' : 'bg-blue-100 hover:bg-blue-200'
+                                                }`}
+                                                onTouchStart={(e) => {
+                                                    e.preventDefault();
+                                                    const timer = setTimeout(() => startEditing(index, 'reps'), 500);
+                                                    e.target._longPressTimer = timer;
+                                                }}
+                                                onTouchEnd={(e) => {
+                                                    e.preventDefault();
+                                                    if (e.target._longPressTimer) {
+                                                        clearTimeout(e.target._longPressTimer);
+                                                    }
+                                                }}
+                                                onMouseDown={(e) => {
+                                                    const timer = setTimeout(() => startEditing(index, 'reps'), 500);
+                                                    e.target._longPressTimer = timer;
+                                                }}
+                                                onMouseUp={(e) => {
+                                                    if (e.target._longPressTimer) {
+                                                        clearTimeout(e.target._longPressTimer);
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (e.target._longPressTimer) {
+                                                        clearTimeout(e.target._longPressTimer);
+                                                    }
+                                                }}
+                                            >
+                                                <RepeatIcon className={`w-4 h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                                                <span className={`font-bold text-sm transition-colors duration-300 ${
+                                                    isDarkMode ? 'text-blue-300' : 'text-blue-800'
+                                                }`}>
+                                                    {currentValues.reps !== exercise.reps 
+                                                        ? `${currentValues.reps}/${exercise.reps}x`
+                                                        : `${currentValues.reps}x`
+                                                    }
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -455,7 +476,7 @@
                                 ? 'text-slate-400 bg-slate-800/70' 
                                 : 'text-slate-400 bg-white/70'
                         }`}>
-                            v0.4.0
+                            v0.4.1
                         </span>
                     </div>
                 </div>
