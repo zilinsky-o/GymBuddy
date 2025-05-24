@@ -444,7 +444,14 @@
                                     </div>
                                 </div>
                             );
-                        })}
+                    </div>
+
+                    {/* Progress Indicator */}
+                    <div className={`max-w-lg mx-auto mt-6 rounded-xl p-4 border transition-all duration-300 ${
+                        isDarkMode 
+                            ? 'bg-slate-800/60 backdrop-blur-sm border-slate-600/50' 
+                            : 'bg-white/60 backdrop-blur-sm border-white/50'
+                    }`}>
                         })}
                     </div>
 
