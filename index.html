@@ -218,8 +218,14 @@
                         />
                     )}
 
+            return (
+                <div className={`min-h-screen p-3 transition-all duration-500 ${
+                    isDarkMode 
+                        ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
+                        : 'bg-gradient-to-br from-indigo-50 via-white to-pink-50'
+                }`}>
                     {/* Header */}
-                    <div className="text-center mb-6 relative z-20">
+                    <div className="text-center mb-6 relative">
                         <h1 className={`text-4xl font-bold bg-gradient-to-r bg-clip-text text-transparent transition-all duration-500 ${
                             isDarkMode 
                                 ? 'from-blue-400 to-purple-400' 
@@ -230,7 +236,7 @@
                     </div>
 
                     {/* Exercise Grid */}
-                    <div className="max-w-lg mx-auto grid grid-cols-1 gap-3 relative z-20">
+                    <div className="max-w-lg mx-auto grid grid-cols-1 gap-3 relative">
                         {exercises.map((exercise, index) => {
                             const isCompleted = completedExercises.has(index);
                             const isBeingEdited = editingExercise?.index === index;
@@ -243,42 +249,43 @@
                                 const range = getValueRange(editingExercise.original, isEditingWeight);
                                 
                                 return (
-                                    <div 
-                                        key={index}
-                                        className={`rounded-2xl p-6 shadow-lg border-2 transition-all duration-300 relative z-30 ${
-                                            isDarkMode
-                                                ? 'bg-slate-800 border-blue-500'
-                                                : 'bg-white border-indigo-300'
-                                        }`}
-                                    >
-                                        <div className="text-center space-y-6">
-                                            <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
-                                                {exercise.name}
-                                            </h3>
-                                            
-                                            <div className="space-y-4">
-                                                {/* Reserved space for bubble */}
-                                                <div className="h-8 flex justify-center items-end">
-                                                    <div className={`px-3 py-1 rounded-lg text-sm font-bold ${
-                                                        isEditingWeight 
-                                                            ? isDarkMode ? 'bg-orange-700 text-orange-100' : 'bg-orange-500 text-white'
-                                                            : isDarkMode ? 'bg-blue-700 text-blue-100' : 'bg-blue-500 text-white'
-                                                    }`}>
-                                                        {isEditingWeight ? formatWeight(editingExercise.value) : editingExercise.value}{isEditingWeight ? 'kg' : 'x'}
-                                                    </div>
-                                                </div>
+                                    <div key={index}>
+                                        <div 
+                                            className={`rounded-2xl p-6 shadow-lg border-2 transition-all duration-300 relative z-50 ${
+                                                isDarkMode
+                                                    ? 'bg-slate-800 border-blue-500'
+                                                    : 'bg-white border-indigo-300'
+                                            }`}
+                                        >
+                                            <div className="text-center space-y-6">
+                                                <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
+                                                    {exercise.name}
+                                                </h3>
                                                 
-                                                {/* Slider */}
-                                                <div className="relative px-4">
-                                                    <input
-                                                        type="range"
-                                                        min={range.min}
-                                                        max={range.max}
-                                                        step={range.step}
-                                                        value={editingExercise.value}
-                                                        onChange={(e) => updateEditValue(parseFloat(e.target.value))}
-                                                        className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                                                    />
+                                                <div className="space-y-4">
+                                                    {/* Reserved space for bubble */}
+                                                    <div className="h-8 flex justify-center items-end">
+                                                        <div className={`px-3 py-1 rounded-lg text-sm font-bold ${
+                                                            isEditingWeight 
+                                                                ? isDarkMode ? 'bg-orange-700 text-orange-100' : 'bg-orange-500 text-white'
+                                                                : isDarkMode ? 'bg-blue-700 text-blue-100' : 'bg-blue-500 text-white'
+                                                        }`}>
+                                                            {isEditingWeight ? formatWeight(editingExercise.value) : editingExercise.value}{isEditingWeight ? 'kg' : 'x'}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {/* Slider */}
+                                                    <div className="relative px-4">
+                                                        <input
+                                                            type="range"
+                                                            min={range.min}
+                                                            max={range.max}
+                                                            step={range.step}
+                                                            value={editingExercise.value}
+                                                            onChange={(e) => updateEditValue(parseFloat(e.target.value))}
+                                                            className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -290,8 +297,8 @@
                             return (
                                 <div 
                                     key={index}
-                                    className={`rounded-2xl p-4 shadow-lg border-2 transition-all duration-300 hover:scale-[1.02] ${
-                                        shouldDarken ? 'opacity-30 pointer-events-none' : ''
+                                    className={`rounded-2xl p-4 shadow-lg border-2 transition-all duration-300 hover:scale-[1.02] relative ${
+                                        shouldDarken ? 'opacity-30' : ''
                                     } ${
                                         isCompleted 
                                             ? isDarkMode
@@ -301,12 +308,19 @@
                                                 ? 'bg-slate-800/80 hover:border-slate-600 hover:shadow-xl border-slate-700 hover:bg-slate-800/90'
                                                 : 'bg-white hover:border-indigo-200 hover:shadow-xl border-indigo-100 bg-gradient-to-r from-white to-indigo-50/30'
                                     }`}
+                                    onClick={shouldDarken ? finishEditing : undefined}
+                                    onTouchEnd={shouldDarken ? finishEditing : undefined}
                                 >
                                     {/* Top Row: Circle + Exercise Name */}
                                     <div className="flex items-center space-x-3 mb-3">
                                         {/* Completion Circle */}
                                         <div 
-                                            onClick={() => toggleExercise(index)}
+                                            onClick={(e) => {
+                                                if (!shouldDarken) {
+                                                    e.stopPropagation();
+                                                    toggleExercise(index);
+                                                }
+                                            }}
                                             className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-md cursor-pointer hover:scale-110 transition-transform duration-200"
                                         >
                                             {isCompleted ? (
@@ -334,21 +348,29 @@
                                                 isDarkMode ? 'bg-orange-900/50 hover:bg-orange-800/60' : 'bg-orange-100 hover:bg-orange-200'
                                             }`}
                                             onTouchStart={(e) => {
-                                                e.preventDefault();
-                                                const timer = setTimeout(() => startEditing(index, 'weight'), 500);
-                                                e.target._longPressTimer = timer;
+                                                if (!shouldDarken) {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    const timer = setTimeout(() => startEditing(index, 'weight'), 500);
+                                                    e.target._longPressTimer = timer;
+                                                }
                                             }}
                                             onTouchEnd={(e) => {
                                                 e.preventDefault();
+                                                e.stopPropagation();
                                                 if (e.target._longPressTimer) {
                                                     clearTimeout(e.target._longPressTimer);
                                                 }
                                             }}
                                             onMouseDown={(e) => {
-                                                const timer = setTimeout(() => startEditing(index, 'weight'), 500);
-                                                e.target._longPressTimer = timer;
+                                                if (!shouldDarken) {
+                                                    e.stopPropagation();
+                                                    const timer = setTimeout(() => startEditing(index, 'weight'), 500);
+                                                    e.target._longPressTimer = timer;
+                                                }
                                             }}
                                             onMouseUp={(e) => {
+                                                e.stopPropagation();
                                                 if (e.target._longPressTimer) {
                                                     clearTimeout(e.target._longPressTimer);
                                                 }
@@ -376,21 +398,29 @@
                                                 isDarkMode ? 'bg-blue-900/50 hover:bg-blue-800/60' : 'bg-blue-100 hover:bg-blue-200'
                                             }`}
                                             onTouchStart={(e) => {
-                                                e.preventDefault();
-                                                const timer = setTimeout(() => startEditing(index, 'reps'), 500);
-                                                e.target._longPressTimer = timer;
+                                                if (!shouldDarken) {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    const timer = setTimeout(() => startEditing(index, 'reps'), 500);
+                                                    e.target._longPressTimer = timer;
+                                                }
                                             }}
                                             onTouchEnd={(e) => {
                                                 e.preventDefault();
+                                                e.stopPropagation();
                                                 if (e.target._longPressTimer) {
                                                     clearTimeout(e.target._longPressTimer);
                                                 }
                                             }}
                                             onMouseDown={(e) => {
-                                                const timer = setTimeout(() => startEditing(index, 'reps'), 500);
-                                                e.target._longPressTimer = timer;
+                                                if (!shouldDarken) {
+                                                    e.stopPropagation();
+                                                    const timer = setTimeout(() => startEditing(index, 'reps'), 500);
+                                                    e.target._longPressTimer = timer;
+                                                }
                                             }}
                                             onMouseUp={(e) => {
+                                                e.stopPropagation();
                                                 if (e.target._longPressTimer) {
                                                     clearTimeout(e.target._longPressTimer);
                                                 }
@@ -414,6 +444,7 @@
                                     </div>
                                 </div>
                             );
+                        })}
                         })}
                     </div>
 
