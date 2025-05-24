@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v0.4.2</title>
+    <title>GymBuddy v0.4.6</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -199,8 +199,11 @@
                     isDarkMode 
                         ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
                         : 'bg-gradient-to-br from-indigo-50 via-white to-pink-50'
-                }`}>
-                    {React.createElement('div', { className: 'text-center mb-6' },
+                }`} onClick={editingExercise ? finishEditing : undefined}>
+                    {React.createElement('div', { 
+                        className: 'text-center mb-6',
+                        onClick: editingExercise ? finishEditing : undefined
+                    },
                         React.createElement('h1', { 
                             className: `text-4xl font-bold bg-gradient-to-r bg-clip-text text-transparent transition-all duration-500 ${
                                 isDarkMode 
@@ -227,7 +230,8 @@
                                         isDarkMode
                                             ? 'bg-slate-800 border-blue-500'
                                             : 'bg-white border-indigo-300'
-                                    }`
+                                    }`,
+                                    onClick: (e) => e.stopPropagation()
                                 },
                                     React.createElement('div', { className: 'text-center space-y-6' },
                                         React.createElement('h3', { 
@@ -274,7 +278,7 @@
                                             ? 'bg-slate-800/80 hover:border-slate-600 hover:shadow-xl border-slate-700 hover:bg-slate-800/90'
                                             : 'bg-white hover:border-indigo-200 hover:shadow-xl border-indigo-100 bg-gradient-to-r from-white to-indigo-50/30'
                                 }`,
-                                onClick: shouldDarken ? finishEditing : undefined
+                                onClick: shouldDarken ? finishEditing : (e) => e.stopPropagation()
                             },
                                 React.createElement('div', { className: 'flex items-center space-x-3 mb-3' },
                                     React.createElement('div', { 
@@ -402,7 +406,8 @@
                             isDarkMode 
                                 ? 'bg-slate-800/60 backdrop-blur-sm border-slate-600/50' 
                                 : 'bg-white/60 backdrop-blur-sm border-white/50'
-                        }`
+                        }`,
+                        onClick: editingExercise ? finishEditing : undefined
                     },
                         React.createElement('div', { className: 'text-center' },
                             React.createElement('div', { 
@@ -424,13 +429,20 @@
                         )
                     )}
 
-                    {React.createElement('div', { className: 'max-w-lg mx-auto mt-4 flex justify-center' },
+                    {React.createElement('div', { 
+                        className: 'max-w-lg mx-auto mt-4 flex justify-center',
+                        onClick: editingExercise ? finishEditing : undefined
+                    },
                         React.createElement('div', { 
                             className: `flex items-center space-x-3 px-4 py-2 rounded-full transition-all duration-300 ${
                                 isDarkMode 
                                     ? 'bg-slate-800/60 backdrop-blur-sm border border-slate-600/50' 
                                     : 'bg-white/60 backdrop-blur-sm border border-white/50'
-                            }`
+                            }`,
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                if (!editingExercise) toggleDarkMode();
+                            }
                         },
                             React.createElement('span', { 
                                 className: `text-sm transition-colors duration-300 ${
@@ -439,7 +451,10 @@
                             }, '☀️'),
                             
                             React.createElement('button', {
-                                onClick: toggleDarkMode,
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    if (!editingExercise) toggleDarkMode();
+                                },
                                 className: `relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none ${
                                     isDarkMode ? 'bg-blue-600' : 'bg-gray-300'
                                 }`
@@ -459,7 +474,10 @@
                         )
                     )}
 
-                    {React.createElement('div', { className: 'text-center mt-4 space-y-2' },
+                    {React.createElement('div', { 
+                        className: 'text-center mt-4 space-y-2',
+                        onClick: editingExercise ? finishEditing : undefined
+                    },
                         React.createElement('div', { 
                             className: `text-sm transition-colors duration-300 ${
                                 isDarkMode ? 'text-slate-400' : 'text-slate-400'
@@ -472,7 +490,7 @@
                                     ? 'text-slate-400 bg-slate-800/70' 
                                     : 'text-slate-400 bg-white/70'
                             }`
-                        }, 'v0.4.2')
+                        }, 'v0.4.3')
                     )}
                 </div>
             );
