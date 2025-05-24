@@ -205,8 +205,16 @@
                     {editingExercise && (
                         <div 
                             className="fixed inset-0 bg-black/50 z-10 transition-opacity duration-300"
-                            onClick={finishEditing}
-                            onTouchStart={finishEditing}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                finishEditing();
+                            }}
+                            onTouchEnd={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                finishEditing();
+                            }}
                         />
                     )}
 
