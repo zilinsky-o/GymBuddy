@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v1.1.0</title>
+    <title>GymBuddy v1.1.1</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -133,6 +133,50 @@
                    String(today.getDate()).padStart(2, '0');
         };
 
+        const formatSessionDate = (dateString) => {
+            const sessionDate = new Date(dateString + 'T00:00:00');
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            // Get start of current week (Sunday)
+            const startOfThisWeek = new Date(today);
+            startOfThisWeek.setDate(today.getDate() - today.getDay());
+            startOfThisWeek.setHours(0, 0, 0, 0);
+            
+            // Get start of last week
+            const startOfLastWeek = new Date(startOfThisWeek);
+            startOfLastWeek.setDate(startOfThisWeek.getDate() - 7);
+            
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            
+            // Check if it's today (shouldn't happen for history, but just in case)
+            if (sessionDate.toDateString() === today.toDateString()) {
+                return 'Today';
+            }
+            
+            // Check if it's yesterday
+            if (sessionDate.toDateString() === yesterday.toDateString()) {
+                return 'Yesterday';
+            }
+            
+            // Check if it's earlier this week
+            if (sessionDate >= startOfThisWeek && sessionDate < today) {
+                return `${dayNames[sessionDate.getDay()]}, earlier this week`;
+            }
+            
+            // Check if it's last week
+            if (sessionDate >= startOfLastWeek && sessionDate < startOfThisWeek) {
+                return `${dayNames[sessionDate.getDay()]}, last week`;
+            }
+            
+            // Older dates - format as "Tuesday, 27/5/25"
+            const day = sessionDate.getDate();
+            const month = sessionDate.getMonth() + 1;
+            const year = String(sessionDate.getFullYear()).slice(-2);
+            return `${dayNames[sessionDate.getDay()]}, ${day}/${month}/${year}`;
+        };
+
         const hasSessionInteractions = (completedExercises, exerciseValues, startingValues) => {
             // Check if any exercises are completed
             if (completedExercises.size > 0) {
@@ -216,7 +260,9 @@
             const [sessionHistory, setSessionHistory] = useState([]);
             const [currentSessionDate, setCurrentSessionDate] = useState(getTodayDateString());
             const [isLoading, setIsLoading] = useState(true);
-            const [saveStatus, setSaveStatus] = useState(''); // For user feedback
+            const [saveStatus, setSaveStatus] = useState('');
+            const [currentView, setCurrentView] = useState('main'); // 'main', 'history', 'sessionDetail'
+            const [selectedSession, setSelectedSession] = useState(null); // For user feedback
 
             // Load data on component mount
             useEffect(() => {
@@ -452,23 +498,195 @@
                 );
             }
 
+            // History List Screen
+            if (currentView === 'history') {
+                return React.createElement('div', {
+                    className: `min-h-screen p-3 transition-all duration-500 ${
+                        isDarkMode 
+                            ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
+                            : 'bg-gradient-to-br from-indigo-50 via-white to-pink-50'
+                    }`
+                },
+                    React.createElement('div', { className: 'text-center mb-6' },
+                        React.createElement('div', { className: 'flex items-center justify-between mb-4' },
+                            React.createElement('button', {
+                                onClick: () => setCurrentView('main'),
+                                className: `px-4 py-2 rounded-lg transition-colors duration-300 ${
+                                    isDarkMode 
+                                        ? 'bg-slate-700 text-white hover:bg-slate-600' 
+                                        : 'bg-white text-slate-700 hover:bg-gray-50'
+                                } shadow-sm`
+                            }, '← Back'),
+                            React.createElement('h1', { 
+                                className: `text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`
+                            }, 'Workout History'),
+                            React.createElement('div', { className: 'w-16' }) // Spacer for centering
+                        )
+                    ),
+
+                    React.createElement('div', { className: 'max-w-lg mx-auto space-y-3' },
+                        sessionHistory.length === 0 
+                            ? React.createElement('div', { 
+                                className: `text-center py-12 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`
+                            }, 'No workout history yet. Complete your first session to see it here!')
+                            : sessionHistory.slice().reverse().map((session, index) => {
+                                const completedCount = session.completedExercises.length;
+                                const totalExercises = exercises.length;
+                                
+                                return React.createElement('div', {
+                                    key: session.date,
+                                    className: `rounded-2xl p-4 shadow-lg border transition-all duration-300 ${
+                                        isDarkMode
+                                            ? 'bg-slate-800/80 border-slate-700'
+                                            : 'bg-white border-gray-100'
+                                    }`
+                                },
+                                    React.createElement('div', { className: 'flex items-center justify-between' },
+                                        React.createElement('div', {},
+                                            React.createElement('h3', { 
+                                                className: `font-semibold ${isDarkMode ? 'text-white' : 'text-slate-800'}`
+                                            }, formatSessionDate(session.date)),
+                                            React.createElement('p', { 
+                                                className: `text-sm mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`
+                                            }, `${completedCount}/${totalExercises} exercises completed`)
+                                        ),
+                                        React.createElement('button', {
+                                            onClick: () => {
+                                                setSelectedSession(session);
+                                                setCurrentView('sessionDetail');
+                                            },
+                                            className: `px-4 py-2 rounded-lg text-sm transition-colors duration-300 ${
+                                                isDarkMode 
+                                                    ? 'bg-indigo-600 text-white hover:bg-indigo-500' 
+                                                    : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                                            }`
+                                        }, 'View')
+                                    )
+                                );
+                            })
+                    )
+                );
+            }
+
+            // Session Detail Screen
+            if (currentView === 'sessionDetail' && selectedSession) {
+                return React.createElement('div', {
+                    className: `min-h-screen p-3 transition-all duration-500 ${
+                        isDarkMode 
+                            ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
+                            : 'bg-gradient-to-br from-indigo-50 via-white to-pink-50'
+                    }`
+                },
+                    React.createElement('div', { className: 'text-center mb-6' },
+                        React.createElement('div', { className: 'flex items-center justify-between mb-4' },
+                            React.createElement('button', {
+                                onClick: () => setCurrentView('history'),
+                                className: `px-4 py-2 rounded-lg transition-colors duration-300 ${
+                                    isDarkMode 
+                                        ? 'bg-slate-700 text-white hover:bg-slate-600' 
+                                        : 'bg-white text-slate-700 hover:bg-gray-50'
+                                } shadow-sm`
+                            }, '← Back'),
+                            React.createElement('h1', { 
+                                className: `text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`
+                            }, formatSessionDate(selectedSession.date)),
+                            React.createElement('div', { className: 'w-16' }) // Spacer
+                        )
+                    ),
+
+                    React.createElement('div', { className: 'max-w-lg mx-auto grid grid-cols-1 gap-3' },
+                        selectedSession.completedExercises.map(exerciseIndex => {
+                            const exercise = exercises[exerciseIndex];
+                            const finalValues = selectedSession.finalValues[exerciseIndex] || {
+                                weight: exercise.weight,
+                                reps: exercise.reps
+                            };
+
+                            return React.createElement('div', {
+                                key: exerciseIndex,
+                                className: `rounded-2xl p-4 shadow-lg border-2 transition-all duration-300 ${
+                                    isDarkMode
+                                        ? 'bg-gradient-to-r from-green-900/50 to-green-800/50 border-green-600'
+                                        : 'bg-gradient-to-r from-green-50 to-green-100/50 border-green-200'
+                                }`
+                            },
+                                React.createElement('div', { className: 'flex items-center space-x-3 mb-3' },
+                                    React.createElement('div', { 
+                                        className: 'w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-md'
+                                    },
+                                        React.createElement(CheckIcon, { className: 'w-5 h-5 text-white' })
+                                    ),
+                                    React.createElement('h3', { 
+                                        className: `text-lg font-bold transition-colors duration-300 ${
+                                            isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                                        }`
+                                    }, exercise.name)
+                                ),
+                                
+                                React.createElement('div', { className: 'flex justify-end space-x-3' },
+                                    React.createElement('div', { 
+                                        className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
+                                            isDarkMode ? 'bg-orange-900/50' : 'bg-orange-100'
+                                        }`
+                                    },
+                                        React.createElement(DumbbellIcon, { 
+                                            className: `w-4 h-4 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`
+                                        }),
+                                        React.createElement('span', { 
+                                            className: `font-bold text-sm ${
+                                                isDarkMode ? 'text-orange-300' : 'text-orange-800'
+                                            }`
+                                        }, `${formatWeight(finalValues.weight)}kg`)
+                                    ),
+                                    
+                                    React.createElement('div', { 
+                                        className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
+                                            isDarkMode ? 'bg-blue-900/50' : 'bg-blue-100'
+                                        }`
+                                    },
+                                        React.createElement(RepeatIcon, { 
+                                            className: `w-4 h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`
+                                        }),
+                                        React.createElement('span', { 
+                                            className: `font-bold text-sm ${
+                                                isDarkMode ? 'text-blue-300' : 'text-blue-800'
+                                            }`
+                                        }, `${finalValues.reps}x`)
+                                    )
+                                )
+                            );
+                        })
+                    )
+                );
+            }
+
+            // Main Workout Screen
             return (
                 <div className={`min-h-screen p-3 transition-all duration-500 ${
                     isDarkMode 
                         ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
                         : 'bg-gradient-to-br from-indigo-50 via-white to-pink-50'
                 }`} onClick={editingExercise ? finishEditing : undefined}>
-                    {React.createElement('div', { 
-                        className: 'text-center mb-6',
-                        onClick: editingExercise ? finishEditing : undefined
-                    },
-                        React.createElement('h1', { 
-                            className: `text-4xl font-bold bg-gradient-to-r bg-clip-text text-transparent transition-all duration-500 ${
-                                isDarkMode 
-                                    ? 'from-blue-400 to-purple-400' 
-                                    : 'from-indigo-600 to-pink-600'
-                            }`
-                        }, 'GymBuddy')
+                    {/* Header */}
+                    {React.createElement('div', { className: 'text-center mb-6' },
+                        React.createElement('div', { className: 'flex items-center justify-between mb-4' },
+                            React.createElement('div', { className: 'w-20' }), // Spacer
+                            React.createElement('h1', { 
+                                className: `text-4xl font-bold bg-gradient-to-r bg-clip-text text-transparent transition-all duration-500 ${
+                                    isDarkMode 
+                                        ? 'from-blue-400 to-purple-400' 
+                                        : 'from-indigo-600 to-pink-600'
+                                }`
+                            }, 'GymBuddy'),
+                            React.createElement('button', {
+                                onClick: () => setCurrentView('history'),
+                                className: `px-3 py-2 rounded-lg text-sm transition-colors duration-300 ${
+                                    isDarkMode 
+                                        ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' 
+                                        : 'bg-white text-slate-600 hover:bg-gray-50'
+                                } shadow-sm`
+                            }, 'History')
+                        )
                     )}
 
                     {React.createElement('div', { className: 'max-w-lg mx-auto grid grid-cols-1 gap-3' },
@@ -749,7 +967,7 @@
                                         ? 'text-slate-400 bg-slate-800/70' 
                                         : 'text-slate-400 bg-white/70'
                                 }`
-                            }, 'v1.1.0'),
+                            }, 'v1.1.1'),
                             
                             // Session history indicator
                             sessionHistory.length > 0 && React.createElement('span', { 
