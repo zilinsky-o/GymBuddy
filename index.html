@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v0.4.6</title>
+    <title>GymBuddy v0.5.0</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,6 +14,10 @@
     
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <style>
         body {
@@ -80,7 +84,46 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useEffect } = React;
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAja3ry0NloNhpUeIC4_MBg-eR528OrJPE",
+            authDomain: "gymbuddy-odedzi.firebaseapp.com",
+            projectId: "gymbuddy-odedzi",
+            storageBucket: "gymbuddy-odedzi.firebasestorage.app",
+            messagingSenderId: "14645294833",
+            appId: "1:14645294833:web:50ac4be9d92d0faf621b50"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Firebase data management functions
+        const saveUserData = async (data) => {
+            try {
+                await db.collection('users').doc('default').set(data, { merge: true });
+                console.log('Data saved successfully');
+            } catch (error) {
+                console.error('Error saving data:', error);
+            }
+        };
+
+        const loadUserData = async () => {
+            try {
+                const doc = await db.collection('users').doc('default').get();
+                if (doc.exists) {
+                    return doc.data();
+                } else {
+                    console.log('No user data found, using defaults');
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                return null;
+            }
+        };
 
         // Inline SVG icons as React components
         const DumbbellIcon = ({ className }) => (
@@ -135,6 +178,75 @@
                     return acc;
                 }, {});
             });
+            const [isLoading, setIsLoading] = useState(true);
+            const [saveStatus, setSaveStatus] = useState(''); // For user feedback
+
+            // Load data on component mount
+            useEffect(() => {
+                const loadData = async () => {
+                    try {
+                        const userData = await loadUserData();
+                        if (userData) {
+                            // Load settings
+                            if (userData.settings) {
+                                setIsDarkMode(userData.settings.darkMode || false);
+                            }
+                            
+                            // Load current session
+                            if (userData.currentSession) {
+                                if (userData.currentSession.completedExercises) {
+                                    setCompletedExercises(new Set(userData.currentSession.completedExercises));
+                                }
+                                if (userData.currentSession.modifiedValues) {
+                                    setExerciseValues(prev => ({
+                                        ...prev,
+                                        ...userData.currentSession.modifiedValues
+                                    }));
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error loading data:', error);
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+                
+                loadData();
+            }, []);
+
+            // Save data function with debouncing
+            useEffect(() => {
+                if (isLoading) return; // Don't save during initial load
+                
+                const saveData = async () => {
+                    try {
+                        setSaveStatus('saving');
+                        const dataToSave = {
+                            settings: {
+                                darkMode: isDarkMode,
+                                lastUsed: firebase.firestore.Timestamp.now()
+                            },
+                            currentSession: {
+                                completedExercises: Array.from(completedExercises),
+                                modifiedValues: exerciseValues
+                            }
+                        };
+                        
+                        await saveUserData(dataToSave);
+                        setSaveStatus('saved');
+                        setTimeout(() => setSaveStatus(''), 2000); // Clear status after 2s
+                    } catch (error) {
+                        console.error('Error saving data:', error);
+                        setSaveStatus('error');
+                        setTimeout(() => setSaveStatus(''), 3000);
+                    }
+                };
+
+                // Debounce saves by 1 second
+                const timeoutId = setTimeout(saveData, 1000);
+                return () => clearTimeout(timeoutId);
+            }, [completedExercises, isDarkMode, exerciseValues, isLoading]);
 
             const toggleExercise = (index) => {
                 const newCompleted = new Set(completedExercises);
@@ -193,6 +305,37 @@
             };
 
             const completedCount = completedExercises.size;
+
+            // Show loading screen while data loads
+            if (isLoading) {
+                return React.createElement('div', {
+                    className: `min-h-screen flex items-center justify-center transition-all duration-500 ${
+                        isDarkMode 
+                            ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
+                            : 'bg-gradient-to-br from-indigo-50 via-white to-pink-50'
+                    }`
+                },
+                    React.createElement('div', { className: 'text-center' },
+                        React.createElement('div', { 
+                            className: `w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4 ${
+                                isDarkMode 
+                                    ? 'border-slate-600 border-t-blue-400' 
+                                    : 'border-indigo-300 border-t-indigo-600'
+                            }`
+                        }),
+                        React.createElement('h2', { 
+                            className: `text-xl font-semibold ${
+                                isDarkMode ? 'text-white' : 'text-slate-700'
+                            }`
+                        }, 'Loading GymBuddy...'),
+                        React.createElement('p', { 
+                            className: `mt-2 ${
+                                isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                            }`
+                        }, 'Syncing your workout data')
+                    )
+                );
+            }
 
             return (
                 <div className={`min-h-screen p-3 transition-all duration-500 ${
@@ -484,13 +627,28 @@
                             }`
                         }, 'Your workout companion'),
                         
-                        React.createElement('span', { 
-                            className: `inline-block text-xs px-3 py-1 rounded-full shadow-sm backdrop-blur-sm transition-all duration-300 ${
-                                isDarkMode 
-                                    ? 'text-slate-400 bg-slate-800/70' 
-                                    : 'text-slate-400 bg-white/70'
-                            }`
-                        }, 'v0.4.3')
+                        React.createElement('div', { className: 'flex items-center justify-center space-x-3' },
+                            React.createElement('span', { 
+                                className: `inline-block text-xs px-3 py-1 rounded-full shadow-sm backdrop-blur-sm transition-all duration-300 ${
+                                    isDarkMode 
+                                        ? 'text-slate-400 bg-slate-800/70' 
+                                        : 'text-slate-400 bg-white/70'
+                                }`
+                            }, 'v0.5.0'),
+                            
+                            // Save status indicator
+                            saveStatus && React.createElement('span', { 
+                                className: `text-xs px-2 py-1 rounded-full transition-all duration-300 ${
+                                    saveStatus === 'saving' ? 'bg-blue-100 text-blue-600' :
+                                    saveStatus === 'saved' ? 'bg-green-100 text-green-600' :
+                                    saveStatus === 'error' ? 'bg-red-100 text-red-600' : ''
+                                }`
+                            }, 
+                                saveStatus === 'saving' ? '💾 Saving...' :
+                                saveStatus === 'saved' ? '✅ Saved' :
+                                saveStatus === 'error' ? '❌ Error' : ''
+                            )
+                        )
                     )}
                 </div>
             );
