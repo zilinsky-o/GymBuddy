@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v1.0.0</title>
+    <title>GymBuddy v1.1.0</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -125,6 +125,32 @@
             }
         };
 
+        // Helper functions for session management
+        const getTodayDateString = () => {
+            const today = new Date();
+            return today.getFullYear() + '-' + 
+                   String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(today.getDate()).padStart(2, '0');
+        };
+
+        const hasSessionInteractions = (completedExercises, exerciseValues, startingValues) => {
+            // Check if any exercises are completed
+            if (completedExercises.size > 0) {
+                return true;
+            }
+            
+            // Check if any values were changed from starting values
+            for (let index in exerciseValues) {
+                const current = exerciseValues[index];
+                const starting = startingValues[index];
+                if (current.weight !== starting.weight || current.reps !== starting.reps) {
+                    return true;
+                }
+            }
+            
+            return false;
+        };
+
         // Inline SVG icons as React components
         const DumbbellIcon = ({ className }) => (
             <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -178,6 +204,17 @@
                     return acc;
                 }, {});
             });
+            const [startingValues, setStartingValues] = useState(() => {
+                return exercises.reduce((acc, exercise, index) => {
+                    acc[index] = {
+                        weight: exercise.weight,
+                        reps: exercise.reps
+                    };
+                    return acc;
+                }, {});
+            });
+            const [sessionHistory, setSessionHistory] = useState([]);
+            const [currentSessionDate, setCurrentSessionDate] = useState(getTodayDateString());
             const [isLoading, setIsLoading] = useState(true);
             const [saveStatus, setSaveStatus] = useState(''); // For user feedback
 
@@ -186,24 +223,99 @@
                 const loadData = async () => {
                     try {
                         const userData = await loadUserData();
+                        const today = getTodayDateString();
+                        
                         if (userData) {
                             // Load settings
                             if (userData.settings) {
                                 setIsDarkMode(userData.settings.darkMode || false);
                             }
                             
-                            // Load current session
-                            if (userData.currentSession) {
-                                if (userData.currentSession.completedExercises) {
-                                    setCompletedExercises(new Set(userData.currentSession.completedExercises));
+                            // Load session history
+                            if (userData.sessionHistory) {
+                                setSessionHistory(userData.sessionHistory);
+                            }
+                            
+                            // Check if it's a new day
+                            const lastSessionDate = userData.currentSession?.sessionDate;
+                            const isNewDay = lastSessionDate && lastSessionDate !== today;
+                            
+                            if (isNewDay) {
+                                console.log('New day detected, checking for session to save');
+                                
+                                // Check if previous session had interactions
+                                const prevCompleted = new Set(userData.currentSession?.completedExercises || []);
+                                const prevValues = userData.currentSession?.modifiedValues || {};
+                                const prevStarting = userData.currentSession?.startingValues || {};
+                                
+                                if (hasSessionInteractions(prevCompleted, prevValues, prevStarting)) {
+                                    console.log('Previous session had interactions, saving to history');
+                                    
+                                    // Save previous session to history
+                                    const sessionToSave = {
+                                        date: lastSessionDate,
+                                        completedExercises: Array.from(prevCompleted),
+                                        finalValues: prevValues,
+                                        startingValues: prevStarting
+                                    };
+                                    
+                                    const newHistory = [...(userData.sessionHistory || []), sessionToSave];
+                                    setSessionHistory(newHistory);
+                                    
+                                    // Start new day with previous session's final values
+                                    const newStartingValues = { ...prevValues };
+                                    setStartingValues(newStartingValues);
+                                    setExerciseValues(newStartingValues);
+                                    
+                                    // Reset completion status for new day
+                                    setCompletedExercises(new Set());
+                                    setCurrentSessionDate(today);
+                                    
+                                    // Save the updated data immediately
+                                    await saveUserData({
+                                        ...userData,
+                                        sessionHistory: newHistory,
+                                        currentSession: {
+                                            completedExercises: [],
+                                            modifiedValues: newStartingValues,
+                                            startingValues: newStartingValues,
+                                            sessionDate: today
+                                        }
+                                    });
+                                } else {
+                                    console.log('Previous session had no interactions, not saving');
+                                    
+                                    // Still start new day but use last history session values if available
+                                    const lastHistorySession = userData.sessionHistory?.slice(-1)[0];
+                                    if (lastHistorySession) {
+                                        const newStartingValues = lastHistorySession.finalValues;
+                                        setStartingValues(newStartingValues);
+                                        setExerciseValues(newStartingValues);
+                                    }
+                                    
+                                    setCompletedExercises(new Set());
+                                    setCurrentSessionDate(today);
                                 }
-                                if (userData.currentSession.modifiedValues) {
-                                    setExerciseValues(prev => ({
-                                        ...prev,
-                                        ...userData.currentSession.modifiedValues
-                                    }));
+                            } else {
+                                // Same day, load current session
+                                if (userData.currentSession) {
+                                    if (userData.currentSession.completedExercises) {
+                                        setCompletedExercises(new Set(userData.currentSession.completedExercises));
+                                    }
+                                    if (userData.currentSession.modifiedValues) {
+                                        setExerciseValues(userData.currentSession.modifiedValues);
+                                    }
+                                    if (userData.currentSession.startingValues) {
+                                        setStartingValues(userData.currentSession.startingValues);
+                                    }
+                                    if (userData.currentSession.sessionDate) {
+                                        setCurrentSessionDate(userData.currentSession.sessionDate);
+                                    }
                                 }
                             }
+                        } else {
+                            // First time user - set today as session date
+                            setCurrentSessionDate(today);
                         }
                     } catch (error) {
                         console.error('Error loading data:', error);
@@ -229,8 +341,11 @@
                             },
                             currentSession: {
                                 completedExercises: Array.from(completedExercises),
-                                modifiedValues: exerciseValues
-                            }
+                                modifiedValues: exerciseValues,
+                                startingValues: startingValues,
+                                sessionDate: currentSessionDate
+                            },
+                            sessionHistory: sessionHistory
                         };
                         
                         await saveUserData(dataToSave);
@@ -246,7 +361,7 @@
                 // Debounce saves by 1 second
                 const timeoutId = setTimeout(saveData, 1000);
                 return () => clearTimeout(timeoutId);
-            }, [completedExercises, isDarkMode, exerciseValues, isLoading]);
+            }, [completedExercises, isDarkMode, exerciseValues, startingValues, currentSessionDate, sessionHistory, isLoading]);
 
             const toggleExercise = (index) => {
                 const newCompleted = new Set(completedExercises);
@@ -634,7 +749,14 @@
                                         ? 'text-slate-400 bg-slate-800/70' 
                                         : 'text-slate-400 bg-white/70'
                                 }`
-                            }, 'v1.0.0'),
+                            }, 'v1.1.0'),
+                            
+                            // Session history indicator
+                            sessionHistory.length > 0 && React.createElement('span', { 
+                                className: `text-xs px-2 py-1 rounded-full transition-all duration-300 ${
+                                    isDarkMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-600'
+                                }`
+                            }, `📅 ${sessionHistory.length} sessions`),
                             
                             // Save status indicator
                             saveStatus && React.createElement('span', { 
