@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v1.1.2</title>
+    <title>GymBuddy v1.2.0</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -101,28 +101,42 @@
         const db = firebase.firestore();
 
         // Firebase data management functions
-        const saveUserData = async (data) => {
+        const saveUserData = async (userId, data) => {
             try {
-                await db.collection('users').doc('default').set(data, { merge: true });
-                console.log('Data saved successfully');
+                await db.collection('users').doc(userId).set(data, { merge: true });
+                console.log('Data saved successfully for user:', userId);
             } catch (error) {
                 console.error('Error saving data:', error);
             }
         };
 
-        const loadUserData = async () => {
+        const loadUserData = async (userId) => {
             try {
-                const doc = await db.collection('users').doc('default').get();
+                const doc = await db.collection('users').doc(userId).get();
                 if (doc.exists) {
                     return doc.data();
                 } else {
-                    console.log('No user data found, using defaults');
+                    console.log('No user data found for:', userId, 'using defaults');
                     return null;
                 }
             } catch (error) {
                 console.error('Error loading data:', error);
                 return null;
             }
+        };
+
+        // User ID management functions
+        const getCurrentUserId = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const userParam = urlParams.get('user');
+            
+            if (!userParam) {
+                return 'default'; // No parameter = use default path
+            }
+            
+            // Normalize: lowercase, alphanumeric only
+            const normalized = userParam.toLowerCase().replace(/[^a-z0-9]/g, '');
+            return normalized || 'default'; // If nothing left after normalization, use default
         };
 
         // Helper functions for session management
@@ -262,13 +276,14 @@
             const [isLoading, setIsLoading] = useState(true);
             const [saveStatus, setSaveStatus] = useState('');
             const [currentView, setCurrentView] = useState('main'); // 'main', 'history', 'sessionDetail'
-            const [selectedSession, setSelectedSession] = useState(null); // For user feedback
+            const [selectedSession, setSelectedSession] = useState(null);
+            const [currentUserId, setCurrentUserId] = useState(() => getCurrentUserId()); // For user feedback
 
             // Load data on component mount
             useEffect(() => {
                 const loadData = async () => {
                     try {
-                        const userData = await loadUserData();
+                        const userData = await loadUserData(currentUserId);
                         const today = getTodayDateString();
                         
                         if (userData) {
@@ -318,7 +333,7 @@
                                     setCurrentSessionDate(today);
                                     
                                     // Save the updated data immediately
-                                    await saveUserData({
+                                    await saveUserData(currentUserId, {
                                         ...userData,
                                         sessionHistory: newHistory,
                                         currentSession: {
@@ -371,7 +386,22 @@
                 };
                 
                 loadData();
-            }, []);
+            }, [currentUserId]);
+
+            // Handle URL parameter changes
+            useEffect(() => {
+                const handleUrlChange = () => {
+                    const newUserId = getCurrentUserId();
+                    if (newUserId !== currentUserId) {
+                        setCurrentUserId(newUserId);
+                        setIsLoading(true); // This will trigger data reload
+                    }
+                };
+
+                // Listen for URL changes (back/forward buttons, manual URL edits)
+                window.addEventListener('popstate', handleUrlChange);
+                return () => window.removeEventListener('popstate', handleUrlChange);
+            }, [currentUserId]);
 
             // Save data function with debouncing
             useEffect(() => {
@@ -394,7 +424,7 @@
                             sessionHistory: sessionHistory
                         };
                         
-                        await saveUserData(dataToSave);
+                        await saveUserData(currentUserId, dataToSave);
                         setSaveStatus('saved');
                         setTimeout(() => setSaveStatus(''), 2000); // Clear status after 2s
                     } catch (error) {
@@ -407,7 +437,7 @@
                 // Debounce saves by 1 second
                 const timeoutId = setTimeout(saveData, 1000);
                 return () => clearTimeout(timeoutId);
-            }, [completedExercises, isDarkMode, exerciseValues, startingValues, currentSessionDate, sessionHistory, isLoading]);
+            }, [completedExercises, isDarkMode, exerciseValues, startingValues, currentSessionDate, sessionHistory, currentUserId, isLoading]);
 
             const toggleExercise = (index) => {
                 const newCompleted = new Set(completedExercises);
@@ -964,7 +994,7 @@
                                         ? 'text-slate-400 bg-slate-800/70' 
                                         : 'text-slate-400 bg-white/70'
                                 }`
-                            }, 'v1.1.2'),
+                            }, 'v1.2.0'),
                             
                             // Session history indicator
                             sessionHistory.length > 0 && React.createElement('span', { 
