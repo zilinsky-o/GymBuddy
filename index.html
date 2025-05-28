@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v1.3.0</title>
+    <title>GymBuddy v1.3.1</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -312,6 +312,7 @@
             const [selectedSession, setSelectedSession] = useState(null);
             const [currentUserId, setCurrentUserId] = useState(() => getCurrentUserId());
             const [editingProgramExercise, setEditingProgramExercise] = useState(null);
+            const [highlightedExercise, setHighlightedExercise] = useState(null);
 
             // Initialize exercise values when exercises change
             useEffect(() => {
@@ -553,6 +554,10 @@
                     const newExercises = [...exercises];
                     [newExercises[index - 1], newExercises[index]] = [newExercises[index], newExercises[index - 1]];
                     setExercises(newExercises);
+                    
+                    // Highlight the moved item
+                    setHighlightedExercise(index - 1);
+                    setTimeout(() => setHighlightedExercise(null), 1000);
                 }
             };
 
@@ -561,6 +566,10 @@
                     const newExercises = [...exercises];
                     [newExercises[index], newExercises[index + 1]] = [newExercises[index + 1], newExercises[index]];
                     setExercises(newExercises);
+                    
+                    // Highlight the moved item
+                    setHighlightedExercise(index + 1);
+                    setTimeout(() => setHighlightedExercise(null), 1000);
                 }
             };
 
@@ -610,7 +619,13 @@
                     weight: 0,
                     reps: 0
                 };
-                setExercises([...exercises, newExercise]);
+                const newExercises = [...exercises, newExercise];
+                setExercises(newExercises);
+                
+                // Immediately start editing the new exercise
+                setTimeout(() => {
+                    startEditingProgramExercise(newExercises.length - 1);
+                }, 100);
             };
 
             const completedCount = completedExercises.size;
@@ -693,6 +708,11 @@
                                             type: 'text',
                                             value: editingProgramExercise.name,
                                             onChange: (e) => updateProgramExercise('name', e.target.value),
+                                            onFocus: (e) => {
+                                                if (e.target.value === 'New Exercise') {
+                                                    updateProgramExercise('name', '');
+                                                }
+                                            },
                                             className: `w-full px-3 py-2 rounded-lg border text-center font-bold ${
                                                 isDarkMode 
                                                     ? 'bg-slate-700 border-slate-600 text-white' 
@@ -714,6 +734,11 @@
                                                     min: '0',
                                                     value: editingProgramExercise.weight,
                                                     onChange: (e) => updateProgramExercise('weight', parseFloat(e.target.value) || 0),
+                                                    onFocus: (e) => {
+                                                        if (e.target.value === '0') {
+                                                            updateProgramExercise('weight', '');
+                                                        }
+                                                    },
                                                     className: `w-full px-3 py-2 rounded-lg border text-center ${
                                                         isDarkMode 
                                                             ? 'bg-slate-700 border-slate-600 text-white' 
@@ -733,6 +758,11 @@
                                                     min: '0',
                                                     value: editingProgramExercise.reps,
                                                     onChange: (e) => updateProgramExercise('reps', parseInt(e.target.value) || 0),
+                                                    onFocus: (e) => {
+                                                        if (e.target.value === '0') {
+                                                            updateProgramExercise('reps', '');
+                                                        }
+                                                    },
                                                     className: `w-full px-3 py-2 rounded-lg border text-center ${
                                                         isDarkMode 
                                                             ? 'bg-slate-700 border-slate-600 text-white' 
@@ -767,8 +797,12 @@
                             return React.createElement('div', {
                                 key: index,
                                 className: `rounded-2xl p-4 shadow-lg border transition-all duration-300 ${
+                                    highlightedExercise === index ? 'ring-2 ring-blue-400 bg-blue-50/50' : ''
+                                } ${
                                     isDarkMode
-                                        ? 'bg-slate-800/80 border-slate-700'
+                                        ? `bg-slate-800/80 border-slate-700 ${
+                                            highlightedExercise === index ? 'ring-blue-400 bg-blue-900/20' : ''
+                                        }`
                                         : 'bg-white border-gray-100'
                                 }`
                             },
@@ -777,11 +811,11 @@
                                         className: `text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`
                                     }, exercise.name),
                                     
-                                    React.createElement('div', { className: 'flex items-center space-x-1' },
+                                    React.createElement('div', { className: 'flex items-center space-x-2' },
                                         React.createElement('button', {
                                             onClick: () => moveExerciseUp(index),
                                             disabled: index === 0,
-                                            className: `p-1 rounded transition-colors duration-300 ${
+                                            className: `p-2 rounded-lg transition-colors duration-300 ${
                                                 index === 0 
                                                     ? 'opacity-30 cursor-not-allowed' 
                                                     : isDarkMode 
@@ -789,13 +823,13 @@
                                                         : 'text-slate-500 hover:text-slate-700 hover:bg-gray-100'
                                             }`
                                         },
-                                            React.createElement(ChevronUpIcon, { className: 'w-4 h-4' })
+                                            React.createElement(ChevronUpIcon, { className: 'w-5 h-5' })
                                         ),
                                         
                                         React.createElement('button', {
                                             onClick: () => moveExerciseDown(index),
                                             disabled: index === exercises.length - 1,
-                                            className: `p-1 rounded transition-colors duration-300 ${
+                                            className: `p-2 rounded-lg transition-colors duration-300 ${
                                                 index === exercises.length - 1 
                                                     ? 'opacity-30 cursor-not-allowed' 
                                                     : isDarkMode 
@@ -803,29 +837,29 @@
                                                         : 'text-slate-500 hover:text-slate-700 hover:bg-gray-100'
                                             }`
                                         },
-                                            React.createElement(ChevronDownIcon, { className: 'w-4 h-4' })
+                                            React.createElement(ChevronDownIcon, { className: 'w-5 h-5' })
                                         ),
                                         
                                         React.createElement('button', {
                                             onClick: () => startEditingProgramExercise(index),
-                                            className: `p-1 rounded transition-colors duration-300 ${
+                                            className: `p-2 rounded-lg transition-colors duration-300 ${
                                                 isDarkMode 
                                                     ? 'text-blue-400 hover:text-blue-300 hover:bg-slate-700' 
                                                     : 'text-blue-500 hover:text-blue-600 hover:bg-blue-50'
                                             }`
                                         },
-                                            React.createElement(EditIcon, { className: 'w-4 h-4' })
+                                            React.createElement(EditIcon, { className: 'w-5 h-5' })
                                         ),
                                         
                                         React.createElement('button', {
                                             onClick: () => deleteExercise(index),
-                                            className: `p-1 rounded transition-colors duration-300 ${
+                                            className: `p-2 rounded-lg transition-colors duration-300 ${
                                                 isDarkMode 
                                                     ? 'text-red-400 hover:text-red-300 hover:bg-slate-700' 
                                                     : 'text-red-500 hover:text-red-600 hover:bg-red-50'
                                             }`
                                         },
-                                            React.createElement(TrashIcon, { className: 'w-4 h-4' })
+                                            React.createElement(TrashIcon, { className: 'w-5 h-5' })
                                         )
                                     )
                                 ),
@@ -1363,7 +1397,7 @@
                                         ? 'text-slate-400 bg-slate-800/70' 
                                         : 'text-slate-400 bg-white/70'
                                 }`
-                            }, 'v1.3.0'),
+                            }, 'v1.3.1'),
                             
                             sessionHistory.length > 0 && React.createElement('span', { 
                                 className: `text-xs px-2 py-1 rounded-full transition-all duration-300 ${
