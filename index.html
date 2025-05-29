@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v1.3.1</title>
+    <title>GymBuddy v1.4.0</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -34,14 +34,6 @@
             user-select: none;
             -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
-        }
-        
-        /* Enable text selection for input fields */
-        input, textarea {
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
-            user-select: text;
         }
         
         /* Custom slider styling */
@@ -108,21 +100,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Default exercises
-        const DEFAULT_EXERCISES = [
-            { name: 'Leg Extension', weight: 50, reps: 12 },
-            { name: 'Leg Curl', weight: 37.5, reps: 15 },
-            { name: 'Chest Press', weight: 35, reps: 12 },
-            { name: 'Pulldown', weight: 47, reps: 10 },
-            { name: 'Leg Press', weight: 40, reps: 14 },
-            { name: 'Shoulder Press', weight: 22.5, reps: 12 },
-            { name: 'Chest Pull', weight: 40, reps: 14 },
-            { name: 'Hip Thrust', weight: 25, reps: 15 },
-            { name: 'Pull Over', weight: 22.5, reps: 10 },
-            { name: 'Rear Delt', weight: 18, reps: 9 },
-            { name: 'Pec Fly', weight: 25, reps: 13 }
-        ];
-
         // Firebase data management functions
         const saveUserData = async (userId, data) => {
             try {
@@ -154,11 +131,12 @@
             const userParam = urlParams.get('user');
             
             if (!userParam) {
-                return 'default';
+                return 'default'; // No parameter = use default path
             }
             
+            // Normalize: lowercase, alphanumeric only
             const normalized = userParam.toLowerCase().replace(/[^a-z0-9]/g, '');
-            return normalized || 'default';
+            return normalized || 'default'; // If nothing left after normalization, use default
         };
 
         // Helper functions for session management
@@ -175,31 +153,38 @@
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             
+            // Get start of current week (Sunday)
             const startOfThisWeek = new Date(today);
             startOfThisWeek.setDate(today.getDate() - today.getDay());
             startOfThisWeek.setHours(0, 0, 0, 0);
             
+            // Get start of last week
             const startOfLastWeek = new Date(startOfThisWeek);
             startOfLastWeek.setDate(startOfThisWeek.getDate() - 7);
             
             const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             
+            // Check if it's today (shouldn't happen for history, but just in case)
             if (sessionDate.toDateString() === today.toDateString()) {
                 return 'Today';
             }
             
+            // Check if it's yesterday
             if (sessionDate.toDateString() === yesterday.toDateString()) {
                 return 'Yesterday';
             }
             
+            // Check if it's earlier this week
             if (sessionDate >= startOfThisWeek && sessionDate < today) {
                 return `${dayNames[sessionDate.getDay()]}, earlier this week`;
             }
             
+            // Check if it's last week
             if (sessionDate >= startOfLastWeek && sessionDate < startOfThisWeek) {
                 return `${dayNames[sessionDate.getDay()]}, last week`;
             }
             
+            // Older dates - format as "Tuesday, 27/5/25"
             const day = sessionDate.getDate();
             const month = sessionDate.getMonth() + 1;
             const year = String(sessionDate.getFullYear()).slice(-2);
@@ -207,14 +192,16 @@
         };
 
         const hasSessionInteractions = (completedExercises, exerciseValues, startingValues) => {
+            // Check if any exercises are completed
             if (completedExercises.size > 0) {
                 return true;
             }
             
+            // Check if any values were changed from starting values
             for (let index in exerciseValues) {
                 const current = exerciseValues[index];
                 const starting = startingValues[index];
-                if (current.weight !== starting.weight || current.reps !== starting.reps) {
+                if (current.sets !== starting.sets || current.weight !== starting.weight || current.reps !== starting.reps) {
                     return true;
                 }
             }
@@ -248,47 +235,28 @@
             </svg>
         );
 
-        const EditIcon = ({ className }) => (
-            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                <path d="m15 5 4 4" />
-            </svg>
-        );
-
-        const ChevronUpIcon = ({ className }) => (
-            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="18,15 12,9 6,15" />
-            </svg>
-        );
-
-        const ChevronDownIcon = ({ className }) => (
-            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6,9 12,15 18,9" />
-            </svg>
-        );
-
-        const TrashIcon = ({ className }) => (
-            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3,6 5,6 21,6" />
-                <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2" />
-            </svg>
-        );
-
-        const PlusIcon = ({ className }) => (
-            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-        );
-
         const GymBuddy = () => {
-            const [exercises, setExercises] = useState(DEFAULT_EXERCISES);
+            const exercises = [
+                { name: 'Leg Extension', sets: 3, weight: 50, reps: 12 },
+                { name: 'Leg Curl', sets: 3, weight: 37.5, reps: 15 },
+                { name: 'Chest Press', sets: 3, weight: 35, reps: 12 },
+                { name: 'Pulldown', sets: 3, weight: 47, reps: 10 },
+                { name: 'Leg Press', sets: 3, weight: 40, reps: 14 },
+                { name: 'Shoulder Press', sets: 3, weight: 22.5, reps: 12 },
+                { name: 'Chest Pull', sets: 3, weight: 40, reps: 14 },
+                { name: 'Hip Thrust', sets: 3, weight: 25, reps: 15 },
+                { name: 'Pull Over', sets: 3, weight: 22.5, reps: 10 },
+                { name: 'Rear Delt', sets: 3, weight: 18, reps: 9 },
+                { name: 'Pec Fly', sets: 3, weight: 25, reps: 13 }
+            ];
+
             const [completedExercises, setCompletedExercises] = useState(new Set());
             const [isDarkMode, setIsDarkMode] = useState(false);
             const [editingExercise, setEditingExercise] = useState(null);
             const [exerciseValues, setExerciseValues] = useState(() => {
-                return DEFAULT_EXERCISES.reduce((acc, exercise, index) => {
+                return exercises.reduce((acc, exercise, index) => {
                     acc[index] = {
+                        sets: exercise.sets,
                         weight: exercise.weight,
                         reps: exercise.reps
                     };
@@ -296,8 +264,9 @@
                 }, {});
             });
             const [startingValues, setStartingValues] = useState(() => {
-                return DEFAULT_EXERCISES.reduce((acc, exercise, index) => {
+                return exercises.reduce((acc, exercise, index) => {
                     acc[index] = {
+                        sets: exercise.sets,
                         weight: exercise.weight,
                         reps: exercise.reps
                     };
@@ -308,32 +277,9 @@
             const [currentSessionDate, setCurrentSessionDate] = useState(getTodayDateString());
             const [isLoading, setIsLoading] = useState(true);
             const [saveStatus, setSaveStatus] = useState('');
-            const [currentView, setCurrentView] = useState('main'); // 'main', 'history', 'sessionDetail', 'editProgram'
+            const [currentView, setCurrentView] = useState('main'); // 'main', 'history', 'sessionDetail'
             const [selectedSession, setSelectedSession] = useState(null);
-            const [currentUserId, setCurrentUserId] = useState(() => getCurrentUserId());
-            const [editingProgramExercise, setEditingProgramExercise] = useState(null);
-            const [highlightedExercise, setHighlightedExercise] = useState(null);
-
-            // Initialize exercise values when exercises change
-            useEffect(() => {
-                const newExerciseValues = {};
-                const newStartingValues = {};
-                
-                exercises.forEach((exercise, index) => {
-                    newExerciseValues[index] = {
-                        weight: exercise.weight,
-                        reps: exercise.reps
-                    };
-                    newStartingValues[index] = {
-                        weight: exercise.weight,
-                        reps: exercise.reps
-                    };
-                });
-                
-                setExerciseValues(newExerciseValues);
-                setStartingValues(newStartingValues);
-                setCompletedExercises(new Set());
-            }, [exercises]);
+            const [currentUserId, setCurrentUserId] = useState(() => getCurrentUserId()); // For user feedback
 
             // Load data on component mount
             useEffect(() => {
@@ -343,11 +289,6 @@
                         const today = getTodayDateString();
                         
                         if (userData) {
-                            // Load custom exercises if they exist
-                            if (userData.customExercises && userData.customExercises.length > 0) {
-                                setExercises(userData.customExercises);
-                            }
-                            
                             // Load settings
                             if (userData.settings) {
                                 setIsDarkMode(userData.settings.darkMode || false);
@@ -365,6 +306,7 @@
                             if (isNewDay) {
                                 console.log('New day detected, checking for session to save');
                                 
+                                // Check if previous session had interactions
                                 const prevCompleted = new Set(userData.currentSession?.completedExercises || []);
                                 const prevValues = userData.currentSession?.modifiedValues || {};
                                 const prevStarting = userData.currentSession?.startingValues || {};
@@ -372,6 +314,7 @@
                                 if (hasSessionInteractions(prevCompleted, prevValues, prevStarting)) {
                                     console.log('Previous session had interactions, saving to history');
                                     
+                                    // Save previous session to history
                                     const sessionToSave = {
                                         date: lastSessionDate,
                                         completedExercises: Array.from(prevCompleted),
@@ -382,13 +325,33 @@
                                     const newHistory = [...(userData.sessionHistory || []), sessionToSave];
                                     setSessionHistory(newHistory);
                                     
-                                    const newStartingValues = { ...prevValues };
+                                    // Start new day with previous session's final values
+                                    const newStartingValues = {};
+                                    for (let index in prevValues) {
+                                        newStartingValues[index] = {
+                                            sets: prevValues[index].sets || 3,
+                                            weight: prevValues[index].weight,
+                                            reps: prevValues[index].reps
+                                        };
+                                    }
+                                    // Fill in any missing exercises with defaults
+                                    exercises.forEach((exercise, index) => {
+                                        if (!newStartingValues[index]) {
+                                            newStartingValues[index] = {
+                                                sets: exercise.sets,
+                                                weight: exercise.weight,
+                                                reps: exercise.reps
+                                            };
+                                        }
+                                    });
                                     setStartingValues(newStartingValues);
                                     setExerciseValues(newStartingValues);
                                     
+                                    // Reset completion status for new day
                                     setCompletedExercises(new Set());
                                     setCurrentSessionDate(today);
                                     
+                                    // Save the updated data immediately
                                     await saveUserData(currentUserId, {
                                         ...userData,
                                         sessionHistory: newHistory,
@@ -402,9 +365,27 @@
                                 } else {
                                     console.log('Previous session had no interactions, not saving');
                                     
+                                    // Still start new day but use last history session values if available
                                     const lastHistorySession = userData.sessionHistory?.slice(-1)[0];
                                     if (lastHistorySession) {
-                                        const newStartingValues = lastHistorySession.finalValues;
+                                        const newStartingValues = {};
+                                        for (let index in lastHistorySession.finalValues) {
+                                            newStartingValues[index] = {
+                                                sets: lastHistorySession.finalValues[index].sets || 3,
+                                                weight: lastHistorySession.finalValues[index].weight,
+                                                reps: lastHistorySession.finalValues[index].reps
+                                            };
+                                        }
+                                        // Fill in any missing exercises with defaults
+                                        exercises.forEach((exercise, index) => {
+                                            if (!newStartingValues[index]) {
+                                                newStartingValues[index] = {
+                                                    sets: exercise.sets,
+                                                    weight: exercise.weight,
+                                                    reps: exercise.reps
+                                                };
+                                            }
+                                        });
                                         setStartingValues(newStartingValues);
                                         setExerciseValues(newStartingValues);
                                     }
@@ -419,10 +400,48 @@
                                         setCompletedExercises(new Set(userData.currentSession.completedExercises));
                                     }
                                     if (userData.currentSession.modifiedValues) {
-                                        setExerciseValues(userData.currentSession.modifiedValues);
+                                        // Ensure sets are included for backward compatibility
+                                        const valuesWithSets = {};
+                                        for (let index in userData.currentSession.modifiedValues) {
+                                            valuesWithSets[index] = {
+                                                sets: userData.currentSession.modifiedValues[index].sets || 3,
+                                                weight: userData.currentSession.modifiedValues[index].weight,
+                                                reps: userData.currentSession.modifiedValues[index].reps
+                                            };
+                                        }
+                                        // Fill in any missing exercises with defaults
+                                        exercises.forEach((exercise, index) => {
+                                            if (!valuesWithSets[index]) {
+                                                valuesWithSets[index] = {
+                                                    sets: exercise.sets,
+                                                    weight: exercise.weight,
+                                                    reps: exercise.reps
+                                                };
+                                            }
+                                        });
+                                        setExerciseValues(valuesWithSets);
                                     }
                                     if (userData.currentSession.startingValues) {
-                                        setStartingValues(userData.currentSession.startingValues);
+                                        // Ensure sets are included for backward compatibility
+                                        const startingWithSets = {};
+                                        for (let index in userData.currentSession.startingValues) {
+                                            startingWithSets[index] = {
+                                                sets: userData.currentSession.startingValues[index].sets || 3,
+                                                weight: userData.currentSession.startingValues[index].weight,
+                                                reps: userData.currentSession.startingValues[index].reps
+                                            };
+                                        }
+                                        // Fill in any missing exercises with defaults
+                                        exercises.forEach((exercise, index) => {
+                                            if (!startingWithSets[index]) {
+                                                startingWithSets[index] = {
+                                                    sets: exercise.sets,
+                                                    weight: exercise.weight,
+                                                    reps: exercise.reps
+                                                };
+                                            }
+                                        });
+                                        setStartingValues(startingWithSets);
                                     }
                                     if (userData.currentSession.sessionDate) {
                                         setCurrentSessionDate(userData.currentSession.sessionDate);
@@ -430,6 +449,7 @@
                                 }
                             }
                         } else {
+                            // First time user - set today as session date
                             setCurrentSessionDate(today);
                         }
                     } catch (error) {
@@ -448,17 +468,18 @@
                     const newUserId = getCurrentUserId();
                     if (newUserId !== currentUserId) {
                         setCurrentUserId(newUserId);
-                        setIsLoading(true);
+                        setIsLoading(true); // This will trigger data reload
                     }
                 };
 
+                // Listen for URL changes (back/forward buttons, manual URL edits)
                 window.addEventListener('popstate', handleUrlChange);
                 return () => window.removeEventListener('popstate', handleUrlChange);
             }, [currentUserId]);
 
             // Save data function with debouncing
             useEffect(() => {
-                if (isLoading) return;
+                if (isLoading) return; // Don't save during initial load
                 
                 const saveData = async () => {
                     try {
@@ -474,13 +495,12 @@
                                 startingValues: startingValues,
                                 sessionDate: currentSessionDate
                             },
-                            sessionHistory: sessionHistory,
-                            customExercises: exercises
+                            sessionHistory: sessionHistory
                         };
                         
                         await saveUserData(currentUserId, dataToSave);
                         setSaveStatus('saved');
-                        setTimeout(() => setSaveStatus(''), 2000);
+                        setTimeout(() => setSaveStatus(''), 2000); // Clear status after 2s
                     } catch (error) {
                         console.error('Error saving data:', error);
                         setSaveStatus('error');
@@ -488,9 +508,10 @@
                     }
                 };
 
+                // Debounce saves by 1 second
                 const timeoutId = setTimeout(saveData, 1000);
                 return () => clearTimeout(timeoutId);
-            }, [completedExercises, isDarkMode, exerciseValues, startingValues, currentSessionDate, sessionHistory, exercises, currentUserId, isLoading]);
+            }, [completedExercises, isDarkMode, exerciseValues, startingValues, currentSessionDate, sessionHistory, currentUserId, isLoading]);
 
             const toggleExercise = (index) => {
                 const newCompleted = new Set(completedExercises);
@@ -536,96 +557,24 @@
                 setEditingExercise(null);
             };
 
-            const getValueRange = (originalValue, isWeight = false) => {
-                const range = Math.round(originalValue * 0.5);
-                const min = Math.max(0, originalValue - range);
-                const max = originalValue + range;
-                const step = isWeight ? 0.5 : 1;
-                return { min, max, step };
+            const getValueRange = (originalValue, type = 'weight') => {
+                if (type === 'sets') {
+                    return { min: 1, max: 5, step: 1 };
+                } else if (type === 'weight') {
+                    const range = Math.round(originalValue * 0.5);
+                    const min = Math.max(0, originalValue - range);
+                    const max = originalValue + range;
+                    return { min, max, step: 0.5 };
+                } else { // reps
+                    const range = Math.round(originalValue * 0.5);
+                    const min = Math.max(0, originalValue - range);
+                    const max = originalValue + range;
+                    return { min, max, step: 1 };
+                }
             };
 
             const formatWeight = (weight) => {
                 return weight.toFixed(1);
-            };
-
-            // Program editing functions
-            const moveExerciseUp = (index) => {
-                if (index > 0) {
-                    const newExercises = [...exercises];
-                    [newExercises[index - 1], newExercises[index]] = [newExercises[index], newExercises[index - 1]];
-                    setExercises(newExercises);
-                    
-                    // Highlight the moved item
-                    setHighlightedExercise(index - 1);
-                    setTimeout(() => setHighlightedExercise(null), 1000);
-                }
-            };
-
-            const moveExerciseDown = (index) => {
-                if (index < exercises.length - 1) {
-                    const newExercises = [...exercises];
-                    [newExercises[index], newExercises[index + 1]] = [newExercises[index + 1], newExercises[index]];
-                    setExercises(newExercises);
-                    
-                    // Highlight the moved item
-                    setHighlightedExercise(index + 1);
-                    setTimeout(() => setHighlightedExercise(null), 1000);
-                }
-            };
-
-            const deleteExercise = (index) => {
-                if (confirm('Are you sure you want to delete this exercise?')) {
-                    const newExercises = exercises.filter((_, i) => i !== index);
-                    setExercises(newExercises);
-                }
-            };
-
-            const startEditingProgramExercise = (index) => {
-                setEditingProgramExercise({
-                    index,
-                    name: exercises[index].name,
-                    weight: exercises[index].weight,
-                    reps: exercises[index].reps
-                });
-            };
-
-            const updateProgramExercise = (field, value) => {
-                setEditingProgramExercise(prev => ({
-                    ...prev,
-                    [field]: value
-                }));
-            };
-
-            const saveProgramExercise = () => {
-                if (editingProgramExercise) {
-                    const newExercises = [...exercises];
-                    newExercises[editingProgramExercise.index] = {
-                        name: editingProgramExercise.name.trim() || 'Unnamed Exercise',
-                        weight: Math.max(0, editingProgramExercise.weight),
-                        reps: Math.max(0, editingProgramExercise.reps)
-                    };
-                    setExercises(newExercises);
-                    setEditingProgramExercise(null);
-                }
-            };
-
-            const cancelEditingProgramExercise = () => {
-                setEditingProgramExercise(null);
-            };
-
-            const addNewExercise = () => {
-                const newExercise = {
-                    name: 'New Exercise',
-                    weight: 0,
-                    reps: 0
-                };
-                const newExercises = [...exercises, newExercise];
-                setExercises(newExercises);
-                
-                // Immediately start editing the new exercise
-                setTimeout(() => {
-                    startEditingProgramExercise(newExercises.length - 1);
-                }, 100);
             };
 
             const completedCount = completedExercises.size;
@@ -661,261 +610,6 @@
                 );
             }
 
-            // Program Edit Screen
-            if (currentView === 'editProgram') {
-                return React.createElement('div', {
-                    className: `min-h-screen p-3 transition-all duration-500 ${
-                        isDarkMode 
-                            ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
-                            : 'bg-gradient-to-br from-indigo-50 via-white to-pink-50'
-                    }`
-                },
-                    React.createElement('div', { className: 'text-center mb-6' },
-                        React.createElement('div', { className: 'flex items-center justify-between mb-4' },
-                            React.createElement('button', {
-                                onClick: () => {
-                                    setCurrentView('main');
-                                    setEditingProgramExercise(null);
-                                },
-                                className: `px-4 py-2 rounded-lg transition-colors duration-300 ${
-                                    isDarkMode 
-                                        ? 'bg-slate-700 text-white hover:bg-slate-600' 
-                                        : 'bg-white text-slate-700 hover:bg-gray-50'
-                                } shadow-sm`
-                            }, '← Back'),
-                            React.createElement('h1', { 
-                                className: `text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`
-                            }, 'Edit Program'),
-                            React.createElement('div', { className: 'w-16' })
-                        )
-                    ),
-
-                    React.createElement('div', { className: 'max-w-lg mx-auto space-y-3' },
-                        exercises.map((exercise, index) => {
-                            const isBeingEdited = editingProgramExercise?.index === index;
-                            
-                            if (isBeingEdited) {
-                                return React.createElement('div', {
-                                    key: index,
-                                    className: `rounded-2xl p-4 shadow-lg border-2 transition-all duration-300 ${
-                                        isDarkMode
-                                            ? 'bg-slate-800 border-blue-500'
-                                            : 'bg-white border-indigo-300'
-                                    }`
-                                },
-                                    React.createElement('div', { className: 'space-y-4' },
-                                        React.createElement('input', {
-                                            type: 'text',
-                                            value: editingProgramExercise.name,
-                                            onChange: (e) => updateProgramExercise('name', e.target.value),
-                                            onFocus: (e) => {
-                                                if (e.target.value === 'New Exercise') {
-                                                    updateProgramExercise('name', '');
-                                                }
-                                            },
-                                            className: `w-full px-3 py-2 rounded-lg border text-center font-bold ${
-                                                isDarkMode 
-                                                    ? 'bg-slate-700 border-slate-600 text-white' 
-                                                    : 'bg-white border-gray-300 text-slate-800'
-                                            }`,
-                                            placeholder: 'Exercise name'
-                                        }),
-                                        
-                                        React.createElement('div', { className: 'flex space-x-3' },
-                                            React.createElement('div', { className: 'flex-1' },
-                                                React.createElement('label', { 
-                                                    className: `block text-sm font-medium mb-1 ${
-                                                        isDarkMode ? 'text-slate-300' : 'text-slate-700'
-                                                    }`
-                                                }, 'Weight (kg)'),
-                                                React.createElement('input', {
-                                                    type: 'number',
-                                                    step: '0.5',
-                                                    min: '0',
-                                                    value: editingProgramExercise.weight,
-                                                    onChange: (e) => updateProgramExercise('weight', parseFloat(e.target.value) || 0),
-                                                    onFocus: (e) => {
-                                                        if (e.target.value === '0') {
-                                                            updateProgramExercise('weight', '');
-                                                        }
-                                                    },
-                                                    className: `w-full px-3 py-2 rounded-lg border text-center ${
-                                                        isDarkMode 
-                                                            ? 'bg-slate-700 border-slate-600 text-white' 
-                                                            : 'bg-white border-gray-300 text-slate-800'
-                                                    }`
-                                                })
-                                            ),
-                                            
-                                            React.createElement('div', { className: 'flex-1' },
-                                                React.createElement('label', { 
-                                                    className: `block text-sm font-medium mb-1 ${
-                                                        isDarkMode ? 'text-slate-300' : 'text-slate-700'
-                                                    }`
-                                                }, 'Reps'),
-                                                React.createElement('input', {
-                                                    type: 'number',
-                                                    min: '0',
-                                                    value: editingProgramExercise.reps,
-                                                    onChange: (e) => updateProgramExercise('reps', parseInt(e.target.value) || 0),
-                                                    onFocus: (e) => {
-                                                        if (e.target.value === '0') {
-                                                            updateProgramExercise('reps', '');
-                                                        }
-                                                    },
-                                                    className: `w-full px-3 py-2 rounded-lg border text-center ${
-                                                        isDarkMode 
-                                                            ? 'bg-slate-700 border-slate-600 text-white' 
-                                                            : 'bg-white border-gray-300 text-slate-800'
-                                                    }`
-                                                })
-                                            )
-                                        ),
-                                        
-                                        React.createElement('div', { className: 'flex space-x-2' },
-                                            React.createElement('button', {
-                                                onClick: saveProgramExercise,
-                                                className: `flex-1 px-4 py-2 rounded-lg transition-colors duration-300 ${
-                                                    isDarkMode 
-                                                        ? 'bg-green-600 text-white hover:bg-green-500' 
-                                                        : 'bg-green-500 text-white hover:bg-green-600'
-                                                }`
-                                            }, 'Save'),
-                                            React.createElement('button', {
-                                                onClick: cancelEditingProgramExercise,
-                                                className: `flex-1 px-4 py-2 rounded-lg transition-colors duration-300 ${
-                                                    isDarkMode 
-                                                        ? 'bg-slate-600 text-white hover:bg-slate-500' 
-                                                        : 'bg-gray-500 text-white hover:bg-gray-600'
-                                                }`
-                                            }, 'Cancel')
-                                        )
-                                    )
-                                );
-                            }
-                            
-                            return React.createElement('div', {
-                                key: index,
-                                className: `rounded-2xl p-4 shadow-lg border transition-all duration-300 ${
-                                    highlightedExercise === index ? 'ring-2 ring-blue-400 bg-blue-50/50' : ''
-                                } ${
-                                    isDarkMode
-                                        ? `bg-slate-800/80 border-slate-700 ${
-                                            highlightedExercise === index ? 'ring-blue-400 bg-blue-900/20' : ''
-                                        }`
-                                        : 'bg-white border-gray-100'
-                                }`
-                            },
-                                React.createElement('div', { className: 'flex items-center justify-between mb-3' },
-                                    React.createElement('h3', { 
-                                        className: `text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`
-                                    }, exercise.name),
-                                    
-                                    React.createElement('div', { className: 'flex items-center space-x-2' },
-                                        React.createElement('button', {
-                                            onClick: () => moveExerciseUp(index),
-                                            disabled: index === 0,
-                                            className: `p-2 rounded-lg transition-colors duration-300 ${
-                                                index === 0 
-                                                    ? 'opacity-30 cursor-not-allowed' 
-                                                    : isDarkMode 
-                                                        ? 'text-slate-400 hover:text-white hover:bg-slate-700' 
-                                                        : 'text-slate-500 hover:text-slate-700 hover:bg-gray-100'
-                                            }`
-                                        },
-                                            React.createElement(ChevronUpIcon, { className: 'w-5 h-5' })
-                                        ),
-                                        
-                                        React.createElement('button', {
-                                            onClick: () => moveExerciseDown(index),
-                                            disabled: index === exercises.length - 1,
-                                            className: `p-2 rounded-lg transition-colors duration-300 ${
-                                                index === exercises.length - 1 
-                                                    ? 'opacity-30 cursor-not-allowed' 
-                                                    : isDarkMode 
-                                                        ? 'text-slate-400 hover:text-white hover:bg-slate-700' 
-                                                        : 'text-slate-500 hover:text-slate-700 hover:bg-gray-100'
-                                            }`
-                                        },
-                                            React.createElement(ChevronDownIcon, { className: 'w-5 h-5' })
-                                        ),
-                                        
-                                        React.createElement('button', {
-                                            onClick: () => startEditingProgramExercise(index),
-                                            className: `p-2 rounded-lg transition-colors duration-300 ${
-                                                isDarkMode 
-                                                    ? 'text-blue-400 hover:text-blue-300 hover:bg-slate-700' 
-                                                    : 'text-blue-500 hover:text-blue-600 hover:bg-blue-50'
-                                            }`
-                                        },
-                                            React.createElement(EditIcon, { className: 'w-5 h-5' })
-                                        ),
-                                        
-                                        React.createElement('button', {
-                                            onClick: () => deleteExercise(index),
-                                            className: `p-2 rounded-lg transition-colors duration-300 ${
-                                                isDarkMode 
-                                                    ? 'text-red-400 hover:text-red-300 hover:bg-slate-700' 
-                                                    : 'text-red-500 hover:text-red-600 hover:bg-red-50'
-                                            }`
-                                        },
-                                            React.createElement(TrashIcon, { className: 'w-5 h-5' })
-                                        )
-                                    )
-                                ),
-                                
-                                React.createElement('div', { className: 'flex justify-end space-x-3' },
-                                    React.createElement('div', { 
-                                        className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
-                                            isDarkMode ? 'bg-orange-900/50' : 'bg-orange-100'
-                                        }`
-                                    },
-                                        React.createElement(DumbbellIcon, { 
-                                            className: `w-4 h-4 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`
-                                        }),
-                                        React.createElement('span', { 
-                                            className: `font-bold text-sm ${
-                                                isDarkMode ? 'text-orange-300' : 'text-orange-800'
-                                            }`
-                                        }, `${formatWeight(exercise.weight)}kg`)
-                                    ),
-                                    
-                                    React.createElement('div', { 
-                                        className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
-                                            isDarkMode ? 'bg-blue-900/50' : 'bg-blue-100'
-                                        }`
-                                    },
-                                        React.createElement(RepeatIcon, { 
-                                            className: `w-4 h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`
-                                        }),
-                                        React.createElement('span', { 
-                                            className: `font-bold text-sm ${
-                                                isDarkMode ? 'text-blue-300' : 'text-blue-800'
-                                            }`
-                                        }, `${exercise.reps}x`)
-                                    )
-                                )
-                            );
-                        }),
-                        
-                        // Add New Exercise Button
-                        React.createElement('button', {
-                            onClick: addNewExercise,
-                            className: `w-full rounded-2xl p-4 border-2 border-dashed transition-all duration-300 hover:scale-105 ${
-                                isDarkMode 
-                                    ? 'border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-300 hover:bg-slate-800/50' 
-                                    : 'border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-600 hover:bg-gray-50'
-                            }`
-                        },
-                            React.createElement('div', { className: 'flex items-center justify-center space-x-2' },
-                                React.createElement(PlusIcon, { className: 'w-5 h-5' }),
-                                React.createElement('span', { className: 'font-medium' }, 'Add New Exercise')
-                            )
-                        )
-                    )
-                );
-            }
-
             // History List Screen
             if (currentView === 'history') {
                 return React.createElement('div', {
@@ -938,7 +632,7 @@
                             React.createElement('h1', { 
                                 className: `text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`
                             }, 'Workout History'),
-                            React.createElement('div', { className: 'w-16' })
+                            React.createElement('div', { className: 'w-16' }) // Spacer for centering
                         )
                     ),
 
@@ -1008,14 +702,15 @@
                             React.createElement('h1', { 
                                 className: `text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`
                             }, formatSessionDate(selectedSession.date)),
-                            React.createElement('div', { className: 'w-16' })
+                            React.createElement('div', { className: 'w-16' }) // Spacer
                         )
                     ),
 
                     React.createElement('div', { className: 'max-w-lg mx-auto grid grid-cols-1 gap-3' },
                         selectedSession.completedExercises.map(exerciseIndex => {
-                            const exercise = exercises[exerciseIndex] || { name: 'Unknown Exercise', weight: 0, reps: 0 };
+                            const exercise = exercises[exerciseIndex];
                             const finalValues = selectedSession.finalValues[exerciseIndex] || {
+                                sets: exercise.sets,
                                 weight: exercise.weight,
                                 reps: exercise.reps
                             };
@@ -1042,6 +737,22 @@
                                 ),
                                 
                                 React.createElement('div', { className: 'flex justify-end space-x-3' },
+                                    // Show sets only if they exist and are not 0
+                                    finalValues.sets && finalValues.sets > 0 ? React.createElement('div', { 
+                                        className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
+                                            isDarkMode ? 'bg-purple-900/50' : 'bg-purple-100'
+                                        }`
+                                    },
+                                        React.createElement('span', { 
+                                            className: `text-sm ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`
+                                        }, '🔁'),
+                                        React.createElement('span', { 
+                                            className: `font-bold text-sm ${
+                                                isDarkMode ? 'text-purple-300' : 'text-purple-800'
+                                            }`
+                                        }, finalValues.sets)
+                                    ) : null,
+                                    
                                     React.createElement('div', { 
                                         className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
                                             isDarkMode ? 'bg-orange-900/50' : 'bg-orange-100'
@@ -1094,29 +805,14 @@
                                     : 'from-indigo-600 to-pink-600'
                             }`
                         }, 'GymBuddy'),
-                        React.createElement('div', { className: 'flex justify-center space-x-3' },
-                            React.createElement('button', {
-                                onClick: () => setCurrentView('history'),
-                                className: `px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                                    isDarkMode 
-                                        ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg hover:shadow-xl' 
-                                        : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg hover:shadow-xl'
-                                } transform hover:scale-105`
-                            }, 'Show History'),
-                            React.createElement('button', {
-                                onClick: () => setCurrentView('editProgram'),
-                                className: `px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                                    isDarkMode 
-                                        ? 'bg-purple-600 text-white hover:bg-purple-500 shadow-lg hover:shadow-xl' 
-                                        : 'bg-purple-500 text-white hover:bg-purple-600 shadow-lg hover:shadow-xl'
-                                } transform hover:scale-105`
-                            },
-                                React.createElement('div', { className: 'flex items-center space-x-1' },
-                                    React.createElement(EditIcon, { className: 'w-4 h-4' }),
-                                    React.createElement('span', {}, 'Edit Program')
-                                )
-                            )
-                        )
+                        React.createElement('button', {
+                            onClick: () => setCurrentView('history'),
+                            className: `px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                                isDarkMode 
+                                    ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg hover:shadow-xl' 
+                                    : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg hover:shadow-xl'
+                            } transform hover:scale-105`
+                        }, 'Show History')
                     )}
 
                     {React.createElement('div', { className: 'max-w-lg mx-auto grid grid-cols-1 gap-3' },
@@ -1124,7 +820,7 @@
                             const isCompleted = completedExercises.has(index);
                             const isBeingEdited = editingExercise?.index === index;
                             const shouldDarken = editingExercise && !isBeingEdited;
-                            const currentValues = exerciseValues[index] || { weight: exercise.weight, reps: exercise.reps };
+                            const currentValues = exerciseValues[index];
 
                             if (isBeingEdited) {
                                 const isEditingWeight = editingExercise.type === 'weight';
@@ -1397,14 +1093,16 @@
                                         ? 'text-slate-400 bg-slate-800/70' 
                                         : 'text-slate-400 bg-white/70'
                                 }`
-                            }, 'v1.3.1'),
+                            }, 'v1.4.0'),
                             
+                            // Session history indicator
                             sessionHistory.length > 0 && React.createElement('span', { 
                                 className: `text-xs px-2 py-1 rounded-full transition-all duration-300 ${
                                     isDarkMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-600'
                                 }`
                             }, `📅 ${sessionHistory.length} sessions`),
                             
+                            // Save status indicator
                             saveStatus && React.createElement('span', { 
                                 className: `text-xs px-2 py-1 rounded-full transition-all duration-300 ${
                                     saveStatus === 'saving' ? 'bg-blue-100 text-blue-600' :
