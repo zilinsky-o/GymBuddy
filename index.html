@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v1.5.0</title>
+    <title>GymBuddy v1.5.1</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -772,7 +772,12 @@
                             }, '← Back'),
                             React.createElement('h1', { 
                                 className: `text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`
-                            }, `Edit ${ROUTINE_CONFIGS[currentRoutine].name}`),
+                            }, 
+                                React.createElement('div', { className: 'flex items-center justify-center space-x-2' },
+                                    React.createElement('span', { className: 'text-2xl' }, ROUTINE_CONFIGS[currentRoutine].icon),
+                                    React.createElement('span', {}, `Edit ${ROUTINE_CONFIGS[currentRoutine].name}`)
+                                )
+                            ),
                             React.createElement('div', { className: 'w-16' })
                         )
                     ),
@@ -918,12 +923,9 @@
                                         : 'bg-white border-gray-100'
                                 }`
                             },
-                                React.createElement('div', { className: 'flex items-center justify-between mb-3' },
-                                    React.createElement('h3', { 
-                                        className: `text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`
-                                    }, exercise.name),
-                                    
-                                    React.createElement('div', { className: 'flex items-center space-x-2' },
+                                React.createElement('div', { className: 'flex items-center space-x-4' },
+                                    // Up/Down buttons - leftmost, stacked vertically
+                                    React.createElement('div', { className: 'flex flex-col space-y-1' },
                                         React.createElement('button', {
                                             onClick: () => moveExerciseUp(index),
                                             disabled: index === 0,
@@ -950,76 +952,87 @@
                                             }`
                                         },
                                             React.createElement(ChevronDownIcon, { className: 'w-5 h-5' })
-                                        ),
-                                        
-                                        React.createElement('button', {
-                                            onClick: () => startEditingProgramExercise(index),
-                                            className: `p-2 rounded-lg transition-colors duration-300 ${
-                                                isDarkMode 
-                                                    ? 'text-blue-400 hover:text-blue-300 hover:bg-slate-700' 
-                                                    : 'text-blue-500 hover:text-blue-600 hover:bg-blue-50'
-                                            }`
-                                        },
-                                            React.createElement(EditIcon, { className: 'w-5 h-5' })
-                                        ),
-                                        
-                                        React.createElement('button', {
-                                            onClick: () => deleteExercise(index),
-                                            className: `p-2 rounded-lg transition-colors duration-300 ${
-                                                isDarkMode 
-                                                    ? 'text-red-400 hover:text-red-300 hover:bg-slate-700' 
-                                                    : 'text-red-500 hover:text-red-600 hover:bg-red-50'
-                                            }`
-                                        },
-                                            React.createElement(TrashIcon, { className: 'w-5 h-5' })
                                         )
-                                    )
-                                ),
-                                
-                                React.createElement('div', { className: 'flex justify-end space-x-3' },
-                                    React.createElement('div', { 
-                                        className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
-                                            isDarkMode ? 'bg-purple-900/50' : 'bg-purple-100'
-                                        }`
-                                    },
-                                        React.createElement(StackIcon, { 
-                                            className: `w-4 h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`
-                                        }),
-                                        React.createElement('span', { 
-                                            className: `font-bold text-sm ${
-                                                isDarkMode ? 'text-purple-300' : 'text-purple-800'
-                                            }`
-                                        }, `${exercise.sets}`)
                                     ),
                                     
-                                    React.createElement('div', { 
-                                        className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
-                                            isDarkMode ? 'bg-orange-900/50' : 'bg-orange-100'
-                                        }`
-                                    },
-                                        React.createElement(DumbbellIcon, { 
-                                            className: `w-4 h-4 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`
-                                        }),
-                                        React.createElement('span', { 
-                                            className: `font-bold text-sm ${
-                                                isDarkMode ? 'text-orange-300' : 'text-orange-800'
-                                            }`
-                                        }, `${formatWeight(exercise.weight)}kg`)
-                                    ),
-                                    
-                                    React.createElement('div', { 
-                                        className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
-                                            isDarkMode ? 'bg-blue-900/50' : 'bg-blue-100'
-                                        }`
-                                    },
-                                        React.createElement(RepeatIcon, { 
-                                            className: `w-4 h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`
-                                        }),
-                                        React.createElement('span', { 
-                                            className: `font-bold text-sm ${
-                                                isDarkMode ? 'text-blue-300' : 'text-blue-800'
-                                            }`
-                                        }, `${exercise.reps}x`)
+                                    // Exercise info and controls
+                                    React.createElement('div', { className: 'flex-1' },
+                                        React.createElement('div', { className: 'flex items-center justify-between mb-3' },
+                                            React.createElement('h3', { 
+                                                className: `text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`
+                                            }, exercise.name),
+                                            
+                                            React.createElement('div', { className: 'flex items-center space-x-2' },
+                                                React.createElement('button', {
+                                                    onClick: () => startEditingProgramExercise(index),
+                                                    className: `p-2 rounded-lg transition-colors duration-300 ${
+                                                        isDarkMode 
+                                                            ? 'text-blue-400 hover:text-blue-300 hover:bg-slate-700' 
+                                                            : 'text-blue-500 hover:text-blue-600 hover:bg-blue-50'
+                                                    }`
+                                                },
+                                                    React.createElement(EditIcon, { className: 'w-5 h-5' })
+                                                ),
+                                                
+                                                React.createElement('button', {
+                                                    onClick: () => deleteExercise(index),
+                                                    className: `p-2 rounded-lg transition-colors duration-300 ${
+                                                        isDarkMode 
+                                                            ? 'text-red-400 hover:text-red-300 hover:bg-slate-700' 
+                                                            : 'text-red-500 hover:text-red-600 hover:bg-red-50'
+                                                    }`
+                                                },
+                                                    React.createElement(TrashIcon, { className: 'w-5 h-5' })
+                                                )
+                                            )
+                                        ),
+                                        
+                                        React.createElement('div', { className: 'flex justify-end space-x-3' },
+                                            React.createElement('div', { 
+                                                className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
+                                                    isDarkMode ? 'bg-purple-900/50' : 'bg-purple-100'
+                                                }`
+                                            },
+                                                React.createElement(StackIcon, { 
+                                                    className: `w-4 h-4 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`
+                                                }),
+                                                React.createElement('span', { 
+                                                    className: `font-bold text-sm ${
+                                                        isDarkMode ? 'text-purple-300' : 'text-purple-800'
+                                                    }`
+                                                }, `${exercise.sets}`)
+                                            ),
+                                            
+                                            React.createElement('div', { 
+                                                className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
+                                                    isDarkMode ? 'bg-orange-900/50' : 'bg-orange-100'
+                                                }`
+                                            },
+                                                React.createElement(DumbbellIcon, { 
+                                                    className: `w-4 h-4 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`
+                                                }),
+                                                React.createElement('span', { 
+                                                    className: `font-bold text-sm ${
+                                                        isDarkMode ? 'text-orange-300' : 'text-orange-800'
+                                                    }`
+                                                }, `${formatWeight(exercise.weight)}kg`)
+                                            ),
+                                            
+                                            React.createElement('div', { 
+                                                className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
+                                                    isDarkMode ? 'bg-blue-900/50' : 'bg-blue-100'
+                                                }`
+                                            },
+                                                React.createElement(RepeatIcon, { 
+                                                    className: `w-4 h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`
+                                                }),
+                                                React.createElement('span', { 
+                                                    className: `font-bold text-sm ${
+                                                        isDarkMode ? 'text-blue-300' : 'text-blue-800'
+                                                    }`
+                                                }, `${exercise.reps}x`)
+                                            )
+                                        )
                                     )
                                 )
                             );
