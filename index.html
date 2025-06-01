@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v1.6.2</title>
+    <title>GymBuddy v1.6.3</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -348,6 +348,7 @@
             const [sessionHistory, setSessionHistory] = useState([]);
             const [currentSessionDate, setCurrentSessionDate] = useState(getTodayDateString());
             const [isLoading, setIsLoading] = useState(true);
+            const [dataLoaded, setDataLoaded] = useState(false);
             const [saveStatus, setSaveStatus] = useState('');
             const [currentView, setCurrentView] = useState('main');
             const [selectedSession, setSelectedSession] = useState(null);
@@ -509,6 +510,8 @@
                         console.error('Error loading data:', error);
                     } finally {
                         setIsLoading(false);
+                        // Set dataLoaded to true after all state updates have been applied
+                        setTimeout(() => setDataLoaded(true), 100);
                     }
                 };
                 
@@ -524,6 +527,7 @@
                     if (newUserId !== currentUserId) {
                         setCurrentUserId(newUserId);
                         setIsLoading(true);
+                        setDataLoaded(false); // Reset dataLoaded when changing users
                     }
                     
                     if (newRTL !== isRTL) {
@@ -537,7 +541,7 @@
 
             // Save data function with debouncing
             useEffect(() => {
-                if (isLoading) return;
+                if (isLoading || !dataLoaded) return; // Wait for data to be fully loaded
                 
                 const saveData = async () => {
                     try {
@@ -572,7 +576,7 @@
 
                 const timeoutId = setTimeout(saveData, 1000);
                 return () => clearTimeout(timeoutId);
-            }, [completedExercises, isDarkMode, isRTL, exerciseValues, startingValues, currentSessionDate, sessionHistory, routines, currentRoutine, currentUserId, isLoading]);
+            }, [completedExercises, isDarkMode, isRTL, exerciseValues, startingValues, currentSessionDate, sessionHistory, routines, currentRoutine, currentUserId, isLoading, dataLoaded]);
 
             const toggleExercise = (index) => {
                 const newCompleted = new Set(completedExercises);
@@ -1681,7 +1685,7 @@
                                         ? 'text-slate-400 bg-slate-800/70' 
                                         : 'text-slate-400 bg-white/70'
                                 }`
-                            }, 'v1.6.2'),
+                            }, 'v1.6.3'),
                             
                             sessionHistory.length > 0 && React.createElement('span', { 
                                 className: `text-xs px-2 py-1 rounded-full transition-all duration-300 ${
