@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v1.6.1</title>
+    <title>GymBuddy v1.6.2</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -983,12 +983,12 @@
                                     
                                     // Exercise info and controls
                                     React.createElement('div', { className: 'flex-1' },
-                                        React.createElement('div', { className: 'flex items-center justify-between mb-3' },
+                                        React.createElement('div', { className: `flex items-center justify-between mb-3 ${isRTL ? 'flex-row-reverse' : ''}` },
                                             React.createElement('h3', { 
-                                                className: `text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`
+                                                className: `text-lg font-bold ${isRTL ? 'text-right' : 'text-left'} ${isDarkMode ? 'text-white' : 'text-slate-800'}`
                                             }, exercise.name),
                                             
-                                            React.createElement('div', { className: 'flex items-center space-x-2' },
+                                            React.createElement('div', { className: `flex items-center space-x-2 ${isRTL ? 'flex-row-reverse space-x-reverse' : ''}` },
                                                 React.createElement('button', {
                                                     onClick: () => startEditingProgramExercise(index),
                                                     className: `p-2 rounded-lg transition-colors duration-300 ${
@@ -1013,7 +1013,7 @@
                                             )
                                         ),
                                         
-                                        React.createElement('div', { className: 'flex justify-end space-x-3' },
+                                        React.createElement('div', { className: `flex ${isRTL ? 'justify-start' : 'justify-end'} space-x-3` },
                                             React.createElement('div', { 
                                                 className: `flex items-center space-x-2 px-3 py-2 rounded-xl shadow-sm ${
                                                     isDarkMode ? 'bg-purple-900/50' : 'bg-purple-100'
@@ -1681,7 +1681,7 @@
                                         ? 'text-slate-400 bg-slate-800/70' 
                                         : 'text-slate-400 bg-white/70'
                                 }`
-                            }, 'v1.6.1'),
+                            }, 'v1.6.2'),
                             
                             sessionHistory.length > 0 && React.createElement('span', { 
                                 className: `text-xs px-2 py-1 rounded-full transition-all duration-300 ${
