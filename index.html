@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v1.6.3</title>
+    <title>GymBuddy v1.6.4</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -355,6 +355,7 @@
             const [currentUserId, setCurrentUserId] = useState(() => getCurrentUserId());
             const [editingProgramExercise, setEditingProgramExercise] = useState(null);
             const [highlightedExercise, setHighlightedExercise] = useState(null);
+            const [isDataLoading, setIsDataLoading] = useState(true); // Track if we're loading data vs user action
 
             // Set document direction based on RTL state - REMOVED for card-only RTL
 
@@ -382,18 +383,22 @@
                 return { values, starting };
             };
 
-            // Update exercise values when routine changes
+            // Update exercise values when routine changes - but preserve progress during data loading
             useEffect(() => {
+                // Don't reset progress if we're just loading data from Firebase
+                if (isDataLoading) return;
+                
                 const { values, starting } = initializeExerciseValues(currentExercises);
                 setExerciseValues(values);
                 setStartingValues(starting);
                 setCompletedExercises(new Set());
-            }, [currentRoutine, routines]);
+            }, [currentRoutine, routines, isDataLoading]);
 
             // Load data on component mount
             useEffect(() => {
                 const loadData = async () => {
                     try {
+                        setIsDataLoading(true); // Prevent routine effect from resetting progress
                         const userData = await loadUserData(currentUserId);
                         const today = getTodayDateString();
                         
@@ -414,10 +419,8 @@
                             // Load settings
                             if (userData.settings) {
                                 setIsDarkMode(userData.settings.darkMode || false);
-                                // Set RTL from URL parameter if present, otherwise from saved settings
                                 setIsRTL(urlRTL || userData.settings.isRTL || false);
                             } else {
-                                // Set RTL from URL parameter for new users
                                 setIsRTL(urlRTL);
                             }
                             
@@ -451,9 +454,9 @@
                                     const newHistory = [...(userData.sessionHistory || []), sessionToSave];
                                     setSessionHistory(newHistory);
                                     
-                                    const { values, starting } = initializeExerciseValues(currentExercises);
-                                    setExerciseValues(values);
-                                    setStartingValues(starting);
+                                    // Start new day with previous session's final values
+                                    setExerciseValues(prevValues);
+                                    setStartingValues(prevValues);
                                     
                                     setCompletedExercises(new Set());
                                     setCurrentSessionDate(today);
@@ -463,8 +466,8 @@
                                         sessionHistory: newHistory,
                                         currentSession: {
                                             completedExercises: [],
-                                            modifiedValues: values,
-                                            startingValues: starting,
+                                            modifiedValues: prevValues,
+                                            startingValues: prevValues,
                                             sessionDate: today,
                                             routine: currentRoutine
                                         }
@@ -472,9 +475,16 @@
                                 } else {
                                     console.log('Previous session had no interactions, not saving');
                                     
-                                    const { values, starting } = initializeExerciseValues(currentExercises);
-                                    setExerciseValues(values);
-                                    setStartingValues(starting);
+                                    // Use last history session values if available, otherwise initialize
+                                    const lastHistorySession = userData.sessionHistory?.slice(-1)[0];
+                                    if (lastHistorySession) {
+                                        setExerciseValues(lastHistorySession.finalValues);
+                                        setStartingValues(lastHistorySession.finalValues);
+                                    } else {
+                                        const { values, starting } = initializeExerciseValues(currentExercises);
+                                        setExerciseValues(values);
+                                        setStartingValues(starting);
+                                    }
                                     
                                     setCompletedExercises(new Set());
                                     setCurrentSessionDate(today);
@@ -497,9 +507,21 @@
                                     if (userData.currentSession.routine) {
                                         setCurrentRoutine(userData.currentSession.routine);
                                     }
+                                } else {
+                                    // No current session, initialize with defaults or last history
+                                    const lastHistorySession = userData.sessionHistory?.slice(-1)[0];
+                                    if (lastHistorySession) {
+                                        setExerciseValues(lastHistorySession.finalValues);
+                                        setStartingValues(lastHistorySession.finalValues);
+                                    } else {
+                                        const { values, starting } = initializeExerciseValues(currentExercises);
+                                        setExerciseValues(values);
+                                        setStartingValues(starting);
+                                    }
                                 }
                             }
                         } else {
+                            // New user - initialize with defaults
                             setCurrentSessionDate(today);
                             setIsRTL(urlRTL);
                             const { values, starting } = initializeExerciseValues(currentExercises);
@@ -510,6 +532,7 @@
                         console.error('Error loading data:', error);
                     } finally {
                         setIsLoading(false);
+                        setIsDataLoading(false); // Allow routine changes to reset progress now
                         // Set dataLoaded to true after all state updates have been applied
                         setTimeout(() => setDataLoaded(true), 100);
                     }
@@ -528,6 +551,7 @@
                         setCurrentUserId(newUserId);
                         setIsLoading(true);
                         setDataLoaded(false); // Reset dataLoaded when changing users
+                        setIsDataLoading(true); // Reset data loading flag
                     }
                     
                     if (newRTL !== isRTL) {
@@ -593,9 +617,17 @@
             };
 
             const switchRoutine = (routineId) => {
+                // If user has progress, confirm before switching
+                if (completedExercises.size > 0 || hasSessionInteractions(completedExercises, exerciseValues, startingValues)) {
+                    if (!confirm('Switch routine? Current session progress will be lost.')) {
+                        return; // User cancelled
+                    }
+                }
+                
                 setCurrentRoutine(routineId);
                 setEditingExercise(null);
                 setEditingProgramExercise(null);
+                // Progress will be reset by the useEffect when routine changes (now that isDataLoading is false)
             };
 
             const startEditing = (index, type) => {
@@ -1685,7 +1717,7 @@
                                         ? 'text-slate-400 bg-slate-800/70' 
                                         : 'text-slate-400 bg-white/70'
                                 }`
-                            }, 'v1.6.3'),
+                            }, 'v1.6.4'),
                             
                             sessionHistory.length > 0 && React.createElement('span', { 
                                 className: `text-xs px-2 py-1 rounded-full transition-all duration-300 ${
