@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v1.6.4</title>
+    <title>GymBuddy v1.6.5</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -359,8 +359,8 @@
 
             // Set document direction based on RTL state - REMOVED for card-only RTL
 
-            // Get current exercises based on selected routine
-            const currentExercises = routines[currentRoutine]?.exercises || DEFAULT_EXERCISES_A;
+            // Get current exercises based on selected routine - fallback to empty array
+            const currentExercises = routines[currentRoutine]?.exercises || [];
 
             // Initialize exercise values for current routine
             const initializeExerciseValues = (exercises) => {
@@ -383,30 +383,21 @@
                 return { values, starting };
             };
 
-            // Update exercise values when routine changes - but preserve progress during data loading
-            useEffect(() => {
-                // Don't reset progress if we're just loading data from Firebase
-                if (isDataLoading) return;
-                
-                const { values, starting } = initializeExerciseValues(currentExercises);
-                setExerciseValues(values);
-                setStartingValues(starting);
-                setCompletedExercises(new Set());
-            }, [currentRoutine, routines, isDataLoading]);
+            // Remove the problematic routine change effect that was resetting progress
+            // Progress should only reset on confirmed routine switches, not data loading
 
-            // Load data on component mount
+            // Load data on component mount - SIMPLIFIED LOGIC
             useEffect(() => {
                 const loadData = async () => {
                     try {
-                        setIsDataLoading(true); // Prevent routine effect from resetting progress
                         const userData = await loadUserData(currentUserId);
                         const today = getTodayDateString();
                         
-                        // Check URL for RTL parameter first
+                        // Check URL for RTL parameter
                         const urlRTL = detectRTLFromURL();
                         
                         if (userData) {
-                            // Load routines if they exist
+                            // Load routines
                             if (userData.routines) {
                                 setRoutines(userData.routines);
                             }
@@ -429,68 +420,13 @@
                                 setSessionHistory(userData.sessionHistory);
                             }
                             
-                            // Check if it's a new day
+                            // Check if same day or new day
                             const lastSessionDate = userData.currentSession?.sessionDate;
-                            const isNewDay = lastSessionDate && lastSessionDate !== today;
+                            const isSameDay = lastSessionDate === today;
                             
-                            if (isNewDay) {
-                                console.log('New day detected, checking for session to save');
-                                
-                                const prevCompleted = new Set(userData.currentSession?.completedExercises || []);
-                                const prevValues = userData.currentSession?.modifiedValues || {};
-                                const prevStarting = userData.currentSession?.startingValues || {};
-                                
-                                if (hasSessionInteractions(prevCompleted, prevValues, prevStarting)) {
-                                    console.log('Previous session had interactions, saving to history');
-                                    
-                                    const sessionToSave = {
-                                        date: lastSessionDate,
-                                        routine: userData.currentSession?.routine || 'A',
-                                        completedExercises: Array.from(prevCompleted),
-                                        finalValues: prevValues,
-                                        startingValues: prevStarting
-                                    };
-                                    
-                                    const newHistory = [...(userData.sessionHistory || []), sessionToSave];
-                                    setSessionHistory(newHistory);
-                                    
-                                    // Start new day with previous session's final values
-                                    setExerciseValues(prevValues);
-                                    setStartingValues(prevValues);
-                                    
-                                    setCompletedExercises(new Set());
-                                    setCurrentSessionDate(today);
-                                    
-                                    await saveUserData(currentUserId, {
-                                        ...userData,
-                                        sessionHistory: newHistory,
-                                        currentSession: {
-                                            completedExercises: [],
-                                            modifiedValues: prevValues,
-                                            startingValues: prevValues,
-                                            sessionDate: today,
-                                            routine: currentRoutine
-                                        }
-                                    });
-                                } else {
-                                    console.log('Previous session had no interactions, not saving');
-                                    
-                                    // Use last history session values if available, otherwise initialize
-                                    const lastHistorySession = userData.sessionHistory?.slice(-1)[0];
-                                    if (lastHistorySession) {
-                                        setExerciseValues(lastHistorySession.finalValues);
-                                        setStartingValues(lastHistorySession.finalValues);
-                                    } else {
-                                        const { values, starting } = initializeExerciseValues(currentExercises);
-                                        setExerciseValues(values);
-                                        setStartingValues(starting);
-                                    }
-                                    
-                                    setCompletedExercises(new Set());
-                                    setCurrentSessionDate(today);
-                                }
-                            } else {
-                                // Same day, load current session
+                            if (isSameDay) {
+                                console.log('Same day - loading current session');
+                                // Same day: Just load current session values
                                 if (userData.currentSession) {
                                     if (userData.currentSession.completedExercises) {
                                         setCompletedExercises(new Set(userData.currentSession.completedExercises));
@@ -501,39 +437,72 @@
                                     if (userData.currentSession.startingValues) {
                                         setStartingValues(userData.currentSession.startingValues);
                                     }
-                                    if (userData.currentSession.sessionDate) {
-                                        setCurrentSessionDate(userData.currentSession.sessionDate);
-                                    }
+                                    setCurrentSessionDate(userData.currentSession.sessionDate);
                                     if (userData.currentSession.routine) {
                                         setCurrentRoutine(userData.currentSession.routine);
                                     }
+                                }
+                            } else {
+                                console.log('New day detected - moving session to history and starting fresh');
+                                // New day: Move current session to history, start fresh with its final values
+                                if (userData.currentSession && hasSessionInteractions(
+                                    new Set(userData.currentSession.completedExercises || []),
+                                    userData.currentSession.modifiedValues || {},
+                                    userData.currentSession.startingValues || {}
+                                )) {
+                                    // Save previous session to history
+                                    const sessionToSave = {
+                                        date: lastSessionDate,
+                                        routine: userData.currentSession.routine || currentRoutine,
+                                        completedExercises: userData.currentSession.completedExercises || [],
+                                        finalValues: userData.currentSession.modifiedValues || {},
+                                        startingValues: userData.currentSession.startingValues || {}
+                                    };
+                                    
+                                    const newHistory = [...(userData.sessionHistory || []), sessionToSave];
+                                    setSessionHistory(newHistory);
+                                    
+                                    // Start new day with previous session's final values
+                                    const newStartingValues = userData.currentSession.modifiedValues || {};
+                                    setExerciseValues(newStartingValues);
+                                    setStartingValues(newStartingValues);
+                                    setCompletedExercises(new Set());
+                                    setCurrentSessionDate(today);
+                                    
+                                    // Save new session immediately
+                                    await saveUserData(currentUserId, {
+                                        ...userData,
+                                        sessionHistory: newHistory,
+                                        currentSession: {
+                                            completedExercises: [],
+                                            modifiedValues: newStartingValues,
+                                            startingValues: newStartingValues,
+                                            sessionDate: today,
+                                            routine: currentRoutine
+                                        }
+                                    });
                                 } else {
-                                    // No current session, initialize with defaults or last history
-                                    const lastHistorySession = userData.sessionHistory?.slice(-1)[0];
-                                    if (lastHistorySession) {
-                                        setExerciseValues(lastHistorySession.finalValues);
-                                        setStartingValues(lastHistorySession.finalValues);
-                                    } else {
-                                        const { values, starting } = initializeExerciseValues(currentExercises);
-                                        setExerciseValues(values);
-                                        setStartingValues(starting);
-                                    }
+                                    // No previous session or no interactions - start with empty session
+                                    setExerciseValues({});
+                                    setStartingValues({});
+                                    setCompletedExercises(new Set());
+                                    setCurrentSessionDate(today);
                                 }
                             }
                         } else {
-                            // New user - initialize with defaults
+                            // New user - start with empty session
+                            console.log('New user - starting with empty session');
                             setCurrentSessionDate(today);
                             setIsRTL(urlRTL);
-                            const { values, starting } = initializeExerciseValues(currentExercises);
-                            setExerciseValues(values);
-                            setStartingValues(starting);
+                            setExerciseValues({});
+                            setStartingValues({});
+                            setCompletedExercises(new Set());
                         }
                     } catch (error) {
                         console.error('Error loading data:', error);
                     } finally {
                         setIsLoading(false);
-                        setIsDataLoading(false); // Allow routine changes to reset progress now
-                        // Set dataLoaded to true after all state updates have been applied
+                        setIsDataLoading(false);
                         setTimeout(() => setDataLoaded(true), 100);
                     }
                 };
@@ -627,7 +596,13 @@
                 setCurrentRoutine(routineId);
                 setEditingExercise(null);
                 setEditingProgramExercise(null);
-                // Progress will be reset by the useEffect when routine changes (now that isDataLoading is false)
+                
+                // Reset progress for new routine - initialize from current routine's exercises
+                const newExercises = routines[routineId]?.exercises || [];
+                const { values, starting } = initializeExerciseValues(newExercises);
+                setExerciseValues(values);
+                setStartingValues(starting);
+                setCompletedExercises(new Set());
             };
 
             const startEditing = (index, type) => {
@@ -1717,7 +1692,7 @@
                                         ? 'text-slate-400 bg-slate-800/70' 
                                         : 'text-slate-400 bg-white/70'
                                 }`
-                            }, 'v1.6.4'),
+                            }, 'v1.6.5'),
                             
                             sessionHistory.length > 0 && React.createElement('span', { 
                                 className: `text-xs px-2 py-1 rounded-full transition-all duration-300 ${
