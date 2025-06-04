@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v1.6.5</title>
+    <title>GymBuddy v1.6.6</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -250,6 +250,7 @@
         };
 
         const hasSessionInteractions = (completedExercises, exerciseValues, startingValues) => {
+            // Session has interactions if exercises are completed OR any values changed
             if (completedExercises.size > 0) {
                 return true;
             }
@@ -257,12 +258,26 @@
             for (let index in exerciseValues) {
                 const current = exerciseValues[index];
                 const starting = startingValues[index];
-                if (current.sets !== starting.sets || current.weight !== starting.weight || current.reps !== starting.reps) {
+                if (current && starting && 
+                    (current.sets !== starting.sets || current.weight !== starting.weight || current.reps !== starting.reps)) {
                     return true;
                 }
             }
             
             return false;
+        };
+
+        // Create complete exercise state for storage
+        const createCompleteExerciseState = (currentExercises, exerciseValues) => {
+            const completeState = {};
+            currentExercises.forEach((exercise, index) => {
+                completeState[index] = exerciseValues[index] || {
+                    sets: exercise.sets || 3,
+                    weight: exercise.weight || 0,
+                    reps: exercise.reps || 0
+                };
+            });
+            return completeState;
         };
 
         // Inline SVG icons as React components
@@ -450,32 +465,37 @@
                                     userData.currentSession.modifiedValues || {},
                                     userData.currentSession.startingValues || {}
                                 )) {
-                                    // Save previous session to history
+                                    // Save previous session to history with complete exercise state
                                     const sessionToSave = {
                                         date: lastSessionDate,
                                         routine: userData.currentSession.routine || currentRoutine,
                                         completedExercises: userData.currentSession.completedExercises || [],
-                                        finalValues: userData.currentSession.modifiedValues || {},
+                                        finalValues: userData.currentSession.modifiedValues || {}, // This is now complete state
                                         startingValues: userData.currentSession.startingValues || {}
                                     };
                                     
                                     const newHistory = [...(userData.sessionHistory || []), sessionToSave];
                                     setSessionHistory(newHistory);
                                     
-                                    // Start new day with previous session's final values
+                                    // Start new day with previous session's complete final values
                                     const newStartingValues = userData.currentSession.modifiedValues || {};
                                     setExerciseValues(newStartingValues);
                                     setStartingValues(newStartingValues);
                                     setCompletedExercises(new Set());
                                     setCurrentSessionDate(today);
                                     
-                                    // Save new session immediately
+                                    // Save new session immediately with complete state
+                                    const completeState = createCompleteExerciseState(
+                                        routines[currentRoutine]?.exercises || [], 
+                                        newStartingValues
+                                    );
+                                    
                                     await saveUserData(currentUserId, {
                                         ...userData,
                                         sessionHistory: newHistory,
                                         currentSession: {
                                             completedExercises: [],
-                                            modifiedValues: newStartingValues,
+                                            modifiedValues: completeState,
                                             startingValues: newStartingValues,
                                             sessionDate: today,
                                             routine: currentRoutine
@@ -539,6 +559,10 @@
                 const saveData = async () => {
                     try {
                         setSaveStatus('saving');
+                        
+                        // Create complete exercise state for current routine
+                        const completeExerciseState = createCompleteExerciseState(currentExercises, exerciseValues);
+                        
                         const dataToSave = {
                             settings: {
                                 darkMode: isDarkMode,
@@ -549,7 +573,7 @@
                             routines: routines,
                             currentSession: {
                                 completedExercises: Array.from(completedExercises),
-                                modifiedValues: exerciseValues,
+                                modifiedValues: completeExerciseState, // Store complete state
                                 startingValues: startingValues,
                                 sessionDate: currentSessionDate,
                                 routine: currentRoutine
@@ -569,7 +593,7 @@
 
                 const timeoutId = setTimeout(saveData, 1000);
                 return () => clearTimeout(timeoutId);
-            }, [completedExercises, isDarkMode, isRTL, exerciseValues, startingValues, currentSessionDate, sessionHistory, routines, currentRoutine, currentUserId, isLoading, dataLoaded]);
+            }, [completedExercises, isDarkMode, isRTL, exerciseValues, startingValues, currentSessionDate, sessionHistory, routines, currentRoutine, currentUserId, isLoading, dataLoaded, currentExercises]);
 
             const toggleExercise = (index) => {
                 const newCompleted = new Set(completedExercises);
@@ -1212,6 +1236,7 @@
 
                     React.createElement('div', { className: 'max-w-lg mx-auto grid grid-cols-1 gap-3' },
                         selectedSession.completedExercises.map(exerciseIndex => {
+                            const sessionExercises = routines[selectedSession.routine || 'A']?.exercises || [];
                             const exercise = sessionExercises[exerciseIndex] || { name: 'Unknown Exercise', sets: 3, weight: 0, reps: 0 };
                             const finalValues = selectedSession.finalValues[exerciseIndex] || {
                                 sets: exercise.sets,
@@ -1692,7 +1717,7 @@
                                         ? 'text-slate-400 bg-slate-800/70' 
                                         : 'text-slate-400 bg-white/70'
                                 }`
-                            }, 'v1.6.5'),
+                            }, 'v1.6.6'),
                             
                             sessionHistory.length > 0 && React.createElement('span', { 
                                 className: `text-xs px-2 py-1 rounded-full transition-all duration-300 ${
