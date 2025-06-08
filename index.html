@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy v1.6.8</title>
+    <title>GymBuddy v1.6.9</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -412,17 +412,11 @@
                         const urlRTL = detectRTLFromURL();
                         
                         if (userData) {
-                            // Load routines or set defaults for new users
+                            // Load routines - new users start with empty routines
                             if (userData.routines) {
                                 setRoutines(userData.routines);
-                            } else {
-                                // New user - provide default exercises as starting templates
-                                setRoutines({
-                                    'A': { exercises: DEFAULT_EXERCISES_A },
-                                    'B': { exercises: DEFAULT_EXERCISES_B },
-                                    'Solo': { exercises: DEFAULT_EXERCISES_SOLO }
-                                });
                             }
+                            // New users already have empty routines from initial state
                             
                             // Load current routine
                             if (userData.currentRoutine) {
@@ -512,25 +506,15 @@
                                 setCurrentSessionDate(today);
                             }
                         } else {
-                            // New user - provide default exercises as starting templates
-                            console.log('New user - providing default exercise templates');
+                            // New user - start with completely empty routines
+                            console.log('New user - starting with empty routines');
                             setCurrentSessionDate(today);
                             setIsRTL(urlRTL);
                             
-                            // Set default exercise templates for new user
-                            setRoutines({
-                                'A': { exercises: DEFAULT_EXERCISES_A },
-                                'B': { exercises: DEFAULT_EXERCISES_B },
-                                'Solo': { exercises: DEFAULT_EXERCISES_SOLO }
-                            });
-                            
-                            // Initialize with template values for the current routine
-                            const templateExercises = currentRoutine === 'A' ? DEFAULT_EXERCISES_A : 
-                                                    currentRoutine === 'B' ? DEFAULT_EXERCISES_B : 
-                                                    DEFAULT_EXERCISES_SOLO;
-                            const { values, starting } = initializeExerciseValues(templateExercises);
-                            setExerciseValues(values);
-                            setStartingValues(starting);
+                            // Routines are already empty from initial state
+                            // Initialize with empty values since no exercises exist
+                            setExerciseValues({});
+                            setStartingValues({});
                             setCompletedExercises(new Set());
                         }
                     } catch (error) {
@@ -1809,7 +1793,7 @@
                                         ? 'text-slate-400 bg-slate-800/70' 
                                         : 'text-slate-400 bg-white/70'
                                 }`
-                            }, 'v1.6.8'),
+                            }, 'v1.6.9'),
                             
                             sessionHistory.length > 0 && React.createElement('span', { 
                                 className: `text-xs px-2 py-1 rounded-full transition-all duration-300 ${
